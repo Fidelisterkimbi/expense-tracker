@@ -1,0 +1,36 @@
+services:
+  database:
+    image: postgres:16
+    container_name: expense-tracker-db
+    environment:
+      POSTGRES_DB: expense_tracker
+      POSTGRES_USER: expense_user
+      POSTGRES_PASSWORD: expense_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  backend:
+    build:
+      context: ./backend
+    container_name: expense-tracker-backend
+    environment:
+      DATABASE_URL: postgresql://expense_user:expense_password@database:5432/expense_tracker
+      JWT_SECRET_KEY: development-secret-change-before-production
+    ports:
+      - "5000:5000"
+    depends_on:
+      - database
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: expense-tracker-frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:

@@ -1,0 +1,30 @@
+# Environment variables / secrets
+.env
+.env.*
+backend/.env
+backend/.env.*
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+venv/
+.venv/
+backend/venv/
+backend/.venv/
+
+# Development backups
+*.backup
+*.before-*
+*.bak
+
+# Logs
+*.log
+
+# OS / editor files
+.DS_Store
+.vscode/
+.idea/
+
+# Node dependencies
+node_modules/

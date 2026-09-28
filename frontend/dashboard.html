@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Expense Tracker</title>
+    <link rel="stylesheet" href="style.css?v=2">
+</head>
+
+<body>
+
+<div class="dashboard-container">
+
+    <div class="dashboard-header">
+        <h1>Expense Tracker</h1>
+        <button class="logout-btn">Logout</button>
+    </div>
+
+    <h2>Dashboard</h2>
+
+    <div class="summary">
+
+        <div class="summary-card">
+            <h3>Balance</h3>
+            <p id="balance">₦0</p>
+        </div>
+
+        <div class="summary-card">
+            <h3>Total Income</h3>
+            <p id="income">₦0</p>
+        </div>
+
+        <div class="summary-card">
+            <h3>Total Expenses</h3>
+            <p id="expenses">₦0</p>
+        </div>
+
+    </div>
+
+    <!-- SAVINGS SECTION -->
+
+    <div class="card savings-section">
+
+        <h2>My Savings</h2>
+
+        <div class="summary">
+
+            <div class="summary-card">
+                <h3>Saving Goal</h3>
+                <p id="savingTarget">₦0</p>
+            </div>
+
+            <div class="summary-card">
+                <h3>Amount Saved</h3>
+                <p id="amountSaved">₦0</p>
+            </div>
+
+            <div class="summary-card">
+                <h3>Remaining</h3>
+                <p id="savingRemaining">₦0</p>
+            </div>
+
+        </div>
+
+        <div class="savings-progress">
+            <h3>Progress</h3>
+
+            <div class="progress-track">
+                <div id="savingProgressBar" class="progress-bar"></div>
+            </div>
+
+            <p id="savingProgress">0%</p>
+        </div>
+
+        <hr>
+
+        <h3>Set Savings Goal</h3>
+
+        <input
+            type="text"
+            id="savingGoalName"
+            placeholder="Goal name e.g. New Laptop"
+        >
+
+        <input
+            type="number"
+            id="savingGoalAmount"
+            placeholder="Target amount"
+        >
+
+        <button id="saveGoal">
+            Set / Update Goal
+        </button>
+
+        <p id="savingGoalMessage"></p>
+
+        <hr>
+
+        <h3>Save Money</h3>
+
+        <div class="payment-details">
+            <p><strong>Bank:</strong> OPay</p>
+
+            <p>
+                <strong>Account Number:</strong>
+                9127594805
+            </p>
+
+            <p>
+                <strong>Account Name:</strong>
+                FIDELIS TERKIMBI SANJO
+            </p>
+        </div>
+
+        <p>
+            After making your transfer, record the amount below.
+        </p>
+
+        <input
+            type="number"
+            id="savingDepositAmount"
+            placeholder="Amount transferred"
+            min="1"
+            step="0.01"
+        >
+
+        <input
+            type="date"
+            id="savingDepositDate"
+        >
+
+        <button id="recordSaving">
+            Record Saving
+        </button>
+
+        <p id="savingDepositMessage"></p>
+
+        <hr>
+
+        <h3>Savings History</h3>
+
+        <div id="savingsHistory">
+            <p>No savings yet.</p>
+        </div>
+
+    </div>
+
+    <div class="card transaction-form">
+        <h2>Add Transaction</h2>
+
+        <input type="number" id="amount" placeholder="Amount">
+
+        <select id="type">
+            <option value="income">Income</option>
+            <option value="expense">Expense</option>
+        </select>
+
+        <input
+            type="text"
+            id="category"
+            placeholder="Category e.g. Food, Salary, Transport"
+        >
+
+        <input
+            type="date"
+            id="transactionDate"
+        >
+
+        <input
+            type="text"
+            id="description"
+            placeholder="Description"
+        >
+
+        <button id="addTransaction">Add Transaction</button>
+
+        <p id="transactionMessage"></p>
+    </div>
+
+    <div class="card">
+        <h2>Recent Transactions</h2>
+
+        <div id="transactionList">
+            <p>No transactions yet.</p>
+        </div>
+    </div>
+
+</div>
+
+<script src="dashboard.js"></script>
+
+</body>
+</html>
