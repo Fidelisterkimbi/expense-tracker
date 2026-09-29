@@ -1,18 +1,59 @@
-let transactions = JSON.parse(localStorage.getItem("transactions")) || [];
+// ==========================================
+// TRANSACTIONS - FLASK / POSTGRESQL
+// ==========================================
 
+let transactions = [];
+let editingTransactionId = null;
+
+const titleInput = document.getElementById("title");
 const amountInput = document.getElementById("amount");
 const typeInput = document.getElementById("type");
 const categoryInput = document.getElementById("category");
+const dateInput = document.getElementById("transactionDate");
 const descriptionInput = document.getElementById("description");
 const message = document.getElementById("transactionMessage");
+const addTransactionButton = document.getElementById("addTransaction");
 
-document.getElementById("addTransaction").addEventListener("click", addTransaction);
+if (addTransactionButton) {
+    addTransactionButton.addEventListener("click", saveTransaction);
+}
 
-function addTransaction() {
+
+function getToken() {
+    return localStorage.getItem("token");
+}
+
+
+function handleUnauthorized(response) {
+    if (response.status === 401) {
+        localStorage.removeItem("token");
+        window.location.href = "index.html";
+        return true;
+    }
+
+    return false;
+}
+
+
+async function saveTransaction() {
+    const token = getToken();
+
+    if (!token) {
+        window.location.href = "index.html";
+        return;
+    }
+
+    const title = titleInput.value.trim();
     const amount = Number(amountInput.value);
     const type = typeInput.value;
     const category = categoryInput.value.trim();
+    const transactionDate = dateInput.value;
     const description = descriptionInput.value.trim();
+
+    if (!title) {
+        message.textContent = "Please enter a transaction title.";
+        return;
+    }
 
     if (!amount || amount <= 0) {
         message.textContent = "Please enter a valid amount.";
@@ -24,41 +65,141 @@ function addTransaction() {
         return;
     }
 
-    const transaction = {
-        id: Date.now(),
+    const payload = {
+        title: title,
         amount: amount,
         type: type,
         category: category,
         description: description
     };
 
-    transactions.push(transaction);
+    if (transactionDate) {
+        payload.date = transactionDate;
+    }
 
-    localStorage.setItem("transactions", JSON.stringify(transactions));
+    const isEditing = editingTransactionId !== null;
 
-    amountInput.value = "";
-    categoryInput.value = "";
-    descriptionInput.value = "";
+    const url = isEditing
+        ? `/api/expenses/${editingTransactionId}`
+        : "/api/expenses";
 
-    message.textContent =
-        document.getElementById("addTransaction").textContent === "Save Changes"
+    const method = isEditing ? "PUT" : "POST";
+
+    addTransactionButton.disabled = true;
+
+    message.textContent = isEditing
+        ? "Saving changes..."
+        : "Adding transaction...";
+
+    try {
+        const response = await fetch(url, {
+            method: method,
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if (handleUnauthorized(response)) {
+            return;
+        }
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            message.textContent =
+                data.error ||
+                data.message ||
+                data.msg ||
+                "Could not save transaction.";
+
+            return;
+        }
+
+        message.textContent = isEditing
             ? "Transaction updated successfully!"
             : "Transaction added successfully!";
 
-    document.getElementById("addTransaction").textContent = "Add Transaction";
+        clearTransactionForm();
 
-    updateDashboard();
+        await loadTransactions();
+
+    } catch (error) {
+        console.error("Transaction save error:", error);
+
+        message.textContent =
+            "Could not connect to the server.";
+
+    } finally {
+        addTransactionButton.disabled = false;
+    }
 }
+
+
+async function loadTransactions() {
+    const token = getToken();
+
+    if (!token) {
+        window.location.href = "index.html";
+        return;
+    }
+
+    try {
+        const response = await fetch("/api/expenses", {
+            headers: {
+                "Authorization": `Bearer ${token}`
+            }
+        });
+
+        if (handleUnauthorized(response)) {
+            return;
+        }
+
+        if (!response.ok) {
+            throw new Error("Could not load transactions");
+        }
+
+        transactions = await response.json();
+
+        transactions.sort((a, b) => {
+            const dateCompare =
+                new Date(b.date) - new Date(a.date);
+
+            if (dateCompare !== 0) {
+                return dateCompare;
+            }
+
+            return Number(b.id) - Number(a.id);
+        });
+
+        updateDashboard();
+
+    } catch (error) {
+        console.error("Load transactions error:", error);
+
+        const transactionList =
+            document.getElementById("transactionList");
+
+        if (transactionList) {
+            transactionList.innerHTML =
+                "<p>Could not load transactions.</p>";
+        }
+    }
+}
+
 
 function updateDashboard() {
     let totalIncome = 0;
     let totalExpenses = 0;
 
     transactions.forEach(transaction => {
+        const amount = Number(transaction.amount) || 0;
+
         if (transaction.type === "income") {
-            totalIncome += transaction.amount;
-        } else {
-            totalExpenses += transaction.amount;
+            totalIncome += amount;
+        } else if (transaction.type === "expense") {
+            totalExpenses += amount;
         }
     });
 
@@ -73,34 +214,71 @@ function updateDashboard() {
     document.getElementById("balance").textContent =
         "₦" + balance.toLocaleString();
 
-    displayTransactions();
+    if (typeof refreshTransactionFilters === "function") {
+        refreshTransactionFilters();
+    } else {
+        displayTransactions();
+    }
 }
 
+
 function displayTransactions() {
-    const transactionList = document.getElementById("transactionList");
+    const transactionList =
+        document.getElementById("transactionList");
+
+    if (!transactionList) {
+        return;
+    }
 
     if (transactions.length === 0) {
-        transactionList.innerHTML = "<p>No transactions yet.</p>";
+        transactionList.innerHTML =
+            "<p>No transactions yet.</p>";
+
         return;
     }
 
     transactionList.innerHTML = "";
 
-    transactions.slice().reverse().forEach(transaction => {
+    transactions.forEach(transaction => {
         const item = document.createElement("div");
         item.className = "transaction-item";
 
-        const sign = transaction.type === "income" ? "+" : "-";
+        const sign =
+            transaction.type === "income" ? "+" : "-";
+
+        const amount =
+            Number(transaction.amount || 0).toLocaleString();
+
+        const title = escapeHtml(
+            transaction.title || transaction.category
+        );
+
+        const category =
+            escapeHtml(transaction.category || "");
+
+        const description =
+            escapeHtml(
+                transaction.description || "No description"
+            );
+
+        const transactionDate =
+            escapeHtml(transaction.date || "");
 
         item.innerHTML = `
             <div>
-                <strong>${transaction.category}</strong>
-                <p>${transaction.description || "No description"}</p>
+                <strong>${title}</strong>
+
+                <p>
+                    ${category}
+                    ${transactionDate ? " • " + transactionDate : ""}
+                </p>
+
+                <p>${description}</p>
             </div>
 
             <div class="transaction-actions">
                 <strong>
-                    ${sign}₦${transaction.amount.toLocaleString()}
+                    ${sign}₦${amount}
                 </strong>
 
                 <button
@@ -121,51 +299,135 @@ function displayTransactions() {
     });
 }
 
+
 function editTransaction(id) {
-    const transaction = transactions.find(transaction => transaction.id === id);
+    const transaction =
+        transactions.find(
+            transaction => Number(transaction.id) === Number(id)
+        );
 
     if (!transaction) {
         return;
     }
 
+    editingTransactionId = transaction.id;
+
+    titleInput.value = transaction.title || "";
     amountInput.value = transaction.amount;
     typeInput.value = transaction.type;
     categoryInput.value = transaction.category;
+    dateInput.value = transaction.date || "";
     descriptionInput.value = transaction.description || "";
 
-    // Remove the old transaction.
-    // Clicking Add Transaction will save the edited version.
-    transactions = transactions.filter(transaction => transaction.id !== id);
+    addTransactionButton.textContent = "Save Changes";
 
-    localStorage.setItem("transactions", JSON.stringify(transactions));
+    message.textContent =
+        "Edit the transaction and click Save Changes.";
 
-    document.getElementById("addTransaction").textContent = "Save Changes";
-
-    message.textContent = "Edit the transaction and click Save Changes.";
-
-    updateDashboard();
-
-    window.scrollTo({
-        top: 0,
-        behavior: "smooth"
-    });
+    document.querySelector(".transaction-form")
+        .scrollIntoView({
+            behavior: "smooth",
+            block: "start"
+        });
 }
 
-function deleteTransaction(id) {
-    transactions = transactions.filter(transaction => transaction.id !== id);
 
-    localStorage.setItem("transactions", JSON.stringify(transactions));
+async function deleteTransaction(id) {
+    const token = getToken();
 
-    updateDashboard();
+    if (!token) {
+        window.location.href = "index.html";
+        return;
+    }
+
+    const confirmed =
+        window.confirm(
+            "Are you sure you want to delete this transaction?"
+        );
+
+    if (!confirmed) {
+        return;
+    }
+
+    try {
+        const response =
+            await fetch(`/api/expenses/${id}`, {
+                method: "DELETE",
+                headers: {
+                    "Authorization": `Bearer ${token}`
+                }
+            });
+
+        if (handleUnauthorized(response)) {
+            return;
+        }
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            message.textContent =
+                data.error ||
+                data.message ||
+                "Could not delete transaction.";
+
+            return;
+        }
+
+        if (
+            Number(editingTransactionId) === Number(id)
+        ) {
+            clearTransactionForm();
+        }
+
+        message.textContent =
+            "Transaction deleted successfully!";
+
+        await loadTransactions();
+
+    } catch (error) {
+        console.error("Delete transaction error:", error);
+
+        message.textContent =
+            "Could not connect to the server.";
+    }
 }
 
-updateDashboard();
+
+function clearTransactionForm() {
+    editingTransactionId = null;
+
+    titleInput.value = "";
+    amountInput.value = "";
+    typeInput.value = "income";
+    categoryInput.value = "";
+    dateInput.value = "";
+    descriptionInput.value = "";
+
+    addTransactionButton.textContent =
+        "Add Transaction";
+}
+
+
+function escapeHtml(value) {
+    return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+}
+
 
 // Logout
-document.querySelector(".logout-btn").addEventListener("click", function () {
-    localStorage.removeItem("token");
-    window.location.href = "index.html";
-});
+document.querySelector(".logout-btn")
+    .addEventListener("click", function () {
+        localStorage.removeItem("token");
+        window.location.href = "index.html";
+    });
+
+
+// Load transactions from PostgreSQL
+loadTransactions();
 
 
 // ========================================
@@ -467,3 +729,212 @@ async function loadSavingsGoal() {
 // Load savings information when dashboard opens
 loadSavingsGoal();
 loadSavingsHistory();
+
+
+// ==========================================
+// TRANSACTION SEARCH & FILTERS
+// ==========================================
+
+const transactionSearch =
+    document.getElementById("transactionSearch");
+
+const transactionTypeFilter =
+    document.getElementById("transactionTypeFilter");
+
+const transactionCategoryFilter =
+    document.getElementById("transactionCategoryFilter");
+
+const transactionDateFilter =
+    document.getElementById("transactionDateFilter");
+
+const transactionCount =
+    document.getElementById("transactionCount");
+
+
+function populateCategoryFilter() {
+    if (!transactionCategoryFilter) return;
+
+    const currentValue = transactionCategoryFilter.value;
+
+    const categories = [
+        ...new Set(
+            transactions
+                .map(transaction => transaction.category)
+                .filter(Boolean)
+        )
+    ].sort((a, b) => a.localeCompare(b));
+
+    transactionCategoryFilter.innerHTML =
+        '<option value="all">All Categories</option>';
+
+    categories.forEach(category => {
+        const option = document.createElement("option");
+
+        option.value = category;
+        option.textContent = category;
+
+        transactionCategoryFilter.appendChild(option);
+    });
+
+    if (categories.includes(currentValue)) {
+        transactionCategoryFilter.value = currentValue;
+    }
+}
+
+
+function getFilteredTransactions() {
+    const search =
+        transactionSearch?.value.trim().toLowerCase() || "";
+
+    const selectedType =
+        transactionTypeFilter?.value || "all";
+
+    const selectedCategory =
+        transactionCategoryFilter?.value || "all";
+
+    const selectedDate =
+        transactionDateFilter?.value || "";
+
+    return transactions.filter(transaction => {
+
+        const title =
+            String(transaction.title || "").toLowerCase();
+
+        const category =
+            String(transaction.category || "").toLowerCase();
+
+        const description =
+            String(transaction.description || "").toLowerCase();
+
+        const matchesSearch =
+            !search ||
+            title.includes(search) ||
+            category.includes(search) ||
+            description.includes(search);
+
+        const matchesType =
+            selectedType === "all" ||
+            transaction.type === selectedType;
+
+        const matchesCategory =
+            selectedCategory === "all" ||
+            transaction.category === selectedCategory;
+
+        const matchesDate =
+            !selectedDate ||
+            transaction.date === selectedDate;
+
+        return (
+            matchesSearch &&
+            matchesType &&
+            matchesCategory &&
+            matchesDate
+        );
+    });
+}
+
+
+function displayFilteredTransactions() {
+    const transactionList =
+        document.getElementById("transactionList");
+
+    if (!transactionList) return;
+
+    const filteredTransactions =
+        getFilteredTransactions();
+
+    if (transactionCount) {
+        transactionCount.textContent =
+            `${filteredTransactions.length} of ${transactions.length} transactions`;
+    }
+
+    if (filteredTransactions.length === 0) {
+        transactionList.innerHTML =
+            "<p>No transactions match your filters.</p>";
+        return;
+    }
+
+    transactionList.innerHTML = "";
+
+    filteredTransactions.forEach(transaction => {
+        const item = document.createElement("div");
+
+        item.className = "transaction-item";
+
+        const sign =
+            transaction.type === "income" ? "+" : "-";
+
+        const amount =
+            Number(transaction.amount || 0).toLocaleString();
+
+        const title =
+            escapeHtml(transaction.title || transaction.category);
+
+        const category =
+            escapeHtml(transaction.category || "");
+
+        const description =
+            escapeHtml(transaction.description || "No description");
+
+        const transactionDate =
+            escapeHtml(transaction.date || "");
+
+        item.innerHTML = `
+            <div>
+                <strong>${title}</strong>
+
+                <p>
+                    ${category}
+                    ${transactionDate ? " • " + transactionDate : ""}
+                </p>
+
+                <p>${description}</p>
+            </div>
+
+            <div class="transaction-actions">
+                <strong>${sign}₦${amount}</strong>
+
+                <button
+                    class="edit-btn"
+                    onclick="editTransaction(${transaction.id})">
+                    Edit
+                </button>
+
+                <button
+                    class="delete-btn"
+                    onclick="deleteTransaction(${transaction.id})">
+                    Delete
+                </button>
+            </div>
+        `;
+
+        transactionList.appendChild(item);
+    });
+}
+
+
+function refreshTransactionFilters() {
+    populateCategoryFilter();
+    displayFilteredTransactions();
+}
+
+
+[
+    transactionSearch,
+    transactionTypeFilter,
+    transactionCategoryFilter,
+    transactionDateFilter
+].forEach(control => {
+
+    if (!control) return;
+
+    const eventName =
+        control === transactionSearch
+            ? "input"
+            : "change";
+
+    control.addEventListener(
+        eventName,
+        displayFilteredTransactions
+    );
+});

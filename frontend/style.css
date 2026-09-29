@@ -889,3 +889,54 @@ hr {
         gap: 5px;
     }
 }
+
+
+/* =========================================
+   TRANSACTION FILTERS
+   ========================================= */
+
+.transaction-filters {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr;
+    gap: 12px;
+    margin: 18px 0 10px;
+}
+
+.transaction-filters input,
+.transaction-filters select {
+    width: 100%;
+    margin: 0;
+    padding: 11px 12px;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 14px;
+    color: var(--text);
+}
+
+.transaction-filters input:focus,
+.transaction-filters select:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(31, 107, 69, 0.08);
+}
+
+#transactionCount {
+    margin: 10px 0 18px;
+    color: var(--muted);
+    font-size: 13px;
+}
+
+/* Mobile transaction filters */
+
+@media (max-width: 700px) {
+    .transaction-filters {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+@media (max-width: 500px) {
+    .transaction-filters {
+        grid-template-columns: 1fr;
+    }
+}

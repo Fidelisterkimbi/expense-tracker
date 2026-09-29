@@ -148,6 +148,12 @@
     <div class="card transaction-form">
         <h2>Add Transaction</h2>
 
+        <input
+            type="text"
+            id="title"
+            placeholder="Title e.g. Groceries, Salary, Transport"
+        >
+
         <input type="number" id="amount" placeholder="Amount">
 
         <select id="type">
@@ -179,6 +185,33 @@
 
     <div class="card">
         <h2>Recent Transactions</h2>
+
+        <div class="transaction-filters">
+
+            <input
+                type="search"
+                id="transactionSearch"
+                placeholder="Search transactions"
+            >
+
+            <select id="transactionTypeFilter">
+                <option value="all">All Types</option>
+                <option value="income">Income</option>
+                <option value="expense">Expense</option>
+            </select>
+
+            <select id="transactionCategoryFilter">
+                <option value="all">All Categories</option>
+            </select>
+
+            <input
+                type="date"
+                id="transactionDateFilter"
+            >
+
+        </div>
+
+        <p id="transactionCount"></p>
 
         <div id="transactionList">
             <p>No transactions yet.</p>
