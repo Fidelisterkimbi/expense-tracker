@@ -46,6 +46,7 @@ async function saveTransaction() {
     const title = titleInput.value.trim();
     const amount = Number(amountInput.value);
     const type = typeInput.value;
+    const currency = "NGN";
     const category = categoryInput.value.trim();
     const transactionDate = dateInput.value;
     const description = descriptionInput.value.trim();
@@ -69,6 +70,7 @@ async function saveTransaction() {
         title: title,
         amount: amount,
         type: type,
+        currency: currency,
         category: category,
         description: description
     };
@@ -174,6 +176,7 @@ async function loadTransactions() {
         });
 
         updateDashboard();
+        await loadAccountBalances();
 
     } catch (error) {
         console.error("Load transactions error:", error);
@@ -249,6 +252,12 @@ function displayTransactions() {
         const amount =
             Number(transaction.amount || 0).toLocaleString();
 
+        const currency =
+            transaction.currency || "NGN";
+
+        const currencySymbol =
+            currency === "USD" ? "$" : "₦";
+
         const title = escapeHtml(
             transaction.title || transaction.category
         );
@@ -278,7 +287,7 @@ function displayTransactions() {
 
             <div class="transaction-actions">
                 <strong>
-                    ${sign}₦${amount}
+                    ${sign}${currencySymbol}${amount}
                 </strong>
 
                 <button
@@ -453,6 +462,9 @@ async function recordSaving() {
     const dateInput =
         document.getElementById("savingDepositDate");
 
+    const savingCurrencyInput =
+        document.getElementById("savingCurrency");
+
     const message =
         document.getElementById("savingDepositMessage");
 
@@ -463,6 +475,8 @@ async function recordSaving() {
 
     const amount = Number(amountInput.value);
     const savingDate = dateInput.value;
+    const savingCurrency =
+        savingCurrencyInput?.value || "NGN";
 
     if (!amount || amount <= 0) {
         message.textContent =
@@ -482,6 +496,7 @@ async function recordSaving() {
             },
             body: JSON.stringify({
                 amount: amount,
+                currency: savingCurrency,
                 saving_date: savingDate || null
             })
         });
@@ -511,6 +526,8 @@ async function recordSaving() {
 
         await loadSavingsGoal();
         await loadSavingsHistory();
+        await loadAccountBalances();
+        await loadMonthlyStatistics();
 
     } catch (error) {
         console.error("Record saving error:", error);
@@ -938,3 +955,571 @@ function refreshTransactionFilters() {
         displayFilteredTransactions
     );
 });
+
+
+
+// ==========================================
+// REAL NGN / USD ACCOUNT BALANCES
+// ==========================================
+
+function formatAccountMoney(amount, currency) {
+    const value = Number(amount) || 0;
+
+    return new Intl.NumberFormat(
+        currency === "USD" ? "en-US" : "en-NG",
+        {
+            style: "currency",
+            currency: currency,
+            minimumFractionDigits: currency === "USD" ? 2 : 0,
+            maximumFractionDigits: 2
+        }
+    ).format(value);
+}
+
+
+async function loadAccountBalances() {
+    const token = getToken();
+
+    if (!token) {
+        return;
+    }
+
+    try {
+        const response = await fetch("/api/savings/accounts", {
+            headers: {
+                "Authorization": `Bearer ${token}`
+            }
+        });
+
+        if (handleUnauthorized(response)) {
+            return;
+        }
+
+        if (!response.ok) {
+            throw new Error("Could not load account balances");
+        }
+
+        const accounts = await response.json();
+
+        const ngn = accounts.NGN || {
+            balance: 0,
+            deposit_count: 0
+        };
+
+        const usd = accounts.USD || {
+            balance: 0,
+            deposit_count: 0
+        };
+
+        const nairaBalance =
+            document.getElementById("nairaAccountBalance");
+
+        const dollarBalance =
+            document.getElementById("dollarAccountBalance");
+
+        if (nairaBalance) {
+            nairaBalance.textContent =
+                formatAccountMoney(ngn.balance, "NGN");
+        }
+
+        if (dollarBalance) {
+            dollarBalance.textContent =
+                formatAccountMoney(usd.balance, "USD");
+        }
+
+    } catch (error) {
+        console.error("Account balance error:", error);
+    }
+}
+
+
+// ==========================================
+// MONTHLY STATISTICS
+// ==========================================
+
+const statisticsCurrency =
+    document.getElementById("statisticsCurrency");
+
+const statisticsStartMonth =
+    document.getElementById("statisticsStartMonth");
+
+const statisticsEndMonth =
+    document.getElementById("statisticsEndMonth");
+
+
+function initialiseStatisticsRange() {
+    if (!statisticsStartMonth || !statisticsEndMonth) {
+        return;
+    }
+
+    const now = new Date();
+
+    const endYear = now.getFullYear();
+    const endMonth = String(
+        now.getMonth() + 1
+    ).padStart(2, "0");
+
+    const start = new Date(
+        endYear,
+        now.getMonth() - 5,
+        1
+    );
+
+    const startYear = start.getFullYear();
+    const startMonth = String(
+        start.getMonth() + 1
+    ).padStart(2, "0");
+
+    statisticsStartMonth.value =
+        `${startYear}-${startMonth}`;
+
+    statisticsEndMonth.value =
+        `${endYear}-${endMonth}`;
+}
+
+
+function getStatisticsSymbol(currency) {
+    return currency === "USD" ? "$" : "₦";
+}
+
+
+function formatStatisticsAmount(amount, currency) {
+    return (
+        getStatisticsSymbol(currency) +
+        Number(amount || 0).toLocaleString(
+            currency === "USD" ? "en-US" : "en-NG",
+            {
+                minimumFractionDigits:
+                    currency === "USD" ? 2 : 0,
+
+                maximumFractionDigits: 2
+            }
+        )
+    );
+}
+
+
+async function loadMonthlyStatistics() {
+    const token = getToken();
+
+    if (
+        !token ||
+        !statisticsCurrency ||
+        !statisticsStartMonth ||
+        !statisticsEndMonth
+    ) {
+        return;
+    }
+
+    if (
+        !statisticsStartMonth.value ||
+        !statisticsEndMonth.value
+    ) {
+        return;
+    }
+
+    const [startYear, startMonth] =
+        statisticsStartMonth.value
+            .split("-")
+            .map(Number);
+
+    const [endYear, endMonth] =
+        statisticsEndMonth.value
+            .split("-")
+            .map(Number);
+
+    if (
+        startYear > endYear ||
+        (
+            startYear === endYear &&
+            startMonth > endMonth
+        )
+    ) {
+        return;
+    }
+
+    const currency =
+        statisticsCurrency.value;
+
+    const params = new URLSearchParams({
+        currency: currency,
+        start_year: startYear,
+        start_month: startMonth,
+        end_year: endYear,
+        end_month: endMonth
+    });
+
+    try {
+        const response = await fetch(
+            `/api/savings/statistics/monthly?${params.toString()}`,
+            {
+                headers: {
+                    "Authorization": `Bearer ${token}`
+                }
+            }
+        );
+
+        if (handleUnauthorized(response)) {
+            return;
+        }
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(
+                data.error ||
+                "Could not load monthly statistics"
+            );
+        }
+
+        renderMonthlyStatistics(data);
+
+    } catch (error) {
+        console.error(
+            "Monthly statistics error:",
+            error
+        );
+    }
+}
+
+
+function renderMonthlyStatistics(data) {
+    const currency = data.currency || "NGN";
+
+    const saved =
+        document.getElementById("statisticsSaved");
+
+    const depositCount =
+        document.getElementById("statisticsDepositCount");
+
+    if (saved) {
+        saved.textContent =
+            formatStatisticsAmount(
+                data.summary?.saved,
+                currency
+            );
+    }
+
+    if (depositCount) {
+        depositCount.textContent =
+            Number(
+                data.summary?.deposit_count || 0
+            ).toLocaleString();
+    }
+
+    const chart =
+        document.getElementById("monthlyChart");
+
+    if (!chart) {
+        return;
+    }
+
+    const months = data.months || [];
+
+    if (!months.length) {
+        chart.innerHTML =
+            '<p class="empty-chart">No savings for this range.</p>';
+
+        return;
+    }
+
+    const largestValue = Math.max(
+        1,
+        ...months.map(
+            month => Number(month.saved) || 0
+        )
+    );
+
+    chart.innerHTML = "";
+
+    months.forEach(month => {
+        const column =
+            document.createElement("div");
+
+        column.className =
+            "monthly-chart-column";
+
+        const bars =
+            document.createElement("div");
+
+        bars.className =
+            "monthly-chart-bars";
+
+        const savingsBar =
+            document.createElement("div");
+
+        savingsBar.className =
+            "monthly-bar monthly-income-bar";
+
+        const savedAmount =
+            Number(month.saved) || 0;
+
+        savingsBar.style.height =
+            `${Math.max(
+                savedAmount
+                    ? (savedAmount / largestValue) * 100
+                    : 0,
+                savedAmount ? 3 : 0
+            )}%`;
+
+        savingsBar.title =
+            `Saved: ${formatStatisticsAmount(
+                savedAmount,
+                currency
+            )}`;
+
+        bars.appendChild(savingsBar);
+
+        const label =
+            document.createElement("span");
+
+        label.textContent = month.label;
+
+        column.appendChild(bars);
+        column.appendChild(label);
+
+        chart.appendChild(column);
+    });
+}
+
+
+[
+    statisticsCurrency,
+    statisticsStartMonth,
+    statisticsEndMonth
+].forEach(control => {
+    if (control) {
+        control.addEventListener(
+            "change",
+            loadMonthlyStatistics
+        );
+    }
+});
+
+
+initialiseStatisticsRange();
+loadMonthlyStatistics();
+
+
+// ==========================================
+// USER PROFILE PICTURE
+// ==========================================
+
+const profileAvatar =
+    document.getElementById("profileAvatar");
+
+const profileImage =
+    document.getElementById("profileImage");
+
+const profileInitials =
+    document.getElementById("profileInitials");
+
+const profileUsername =
+    document.getElementById("profileUsername");
+
+const profilePictureInput =
+    document.getElementById("profilePictureInput");
+
+
+function createProfileInitials(username) {
+    const words = String(username || "User")
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean);
+
+    if (!words.length) {
+        return "U";
+    }
+
+    if (words.length === 1) {
+        return words[0]
+            .slice(0, 2)
+            .toUpperCase();
+    }
+
+    return (
+        words[0][0] +
+        words[words.length - 1][0]
+    ).toUpperCase();
+}
+
+
+function displayProfilePicture(url) {
+    if (!profileImage || !profileInitials) {
+        return;
+    }
+
+    if (url) {
+        profileImage.src = `/api${url}`;
+        profileImage.hidden = false;
+        profileInitials.hidden = true;
+    } else {
+        profileImage.removeAttribute("src");
+        profileImage.hidden = true;
+        profileInitials.hidden = false;
+    }
+}
+
+
+async function loadUserProfile() {
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+        return;
+    }
+
+    try {
+        const response = await fetch("/api/profile", {
+            headers: {
+                "Authorization": `Bearer ${token}`
+            }
+        });
+
+        if (response.status === 401) {
+            localStorage.removeItem("token");
+            window.location.href = "index.html";
+            return;
+        }
+
+        if (!response.ok) {
+            throw new Error("Could not load profile");
+        }
+
+        const profile = await response.json();
+
+        if (profileUsername) {
+            profileUsername.textContent =
+                profile.username || "My Account";
+        }
+
+        if (profileInitials) {
+            profileInitials.textContent =
+                createProfileInitials(
+                    profile.username
+                );
+        }
+
+        displayProfilePicture(
+            profile.profile_picture
+        );
+
+    } catch (error) {
+        console.error(
+            "Profile loading error:",
+            error
+        );
+    }
+}
+
+
+async function uploadProfilePicture(file) {
+    const token = localStorage.getItem("token");
+
+    if (!token || !file) {
+        return;
+    }
+
+    const allowedTypes = [
+        "image/jpeg",
+        "image/png",
+        "image/webp"
+    ];
+
+    if (!allowedTypes.includes(file.type)) {
+        alert(
+            "Please choose a JPG, PNG or WEBP image."
+        );
+        return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+        alert(
+            "Profile picture must be 5 MB or smaller."
+        );
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append("picture", file);
+
+    if (profileAvatar) {
+        profileAvatar.classList.add("uploading");
+    }
+
+    try {
+        const response = await fetch(
+            "/api/profile/picture",
+            {
+                method: "POST",
+                headers: {
+                    "Authorization": `Bearer ${token}`
+                },
+                body: formData
+            }
+        );
+
+        if (response.status === 401) {
+            localStorage.removeItem("token");
+            window.location.href = "index.html";
+            return;
+        }
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            alert(
+                data.error ||
+                "Could not upload profile picture."
+            );
+            return;
+        }
+
+        displayProfilePicture(
+            data.profile_picture
+        );
+
+    } catch (error) {
+        console.error(
+            "Profile picture upload error:",
+            error
+        );
+
+        alert(
+            "Could not upload profile picture."
+        );
+
+    } finally {
+        if (profileAvatar) {
+            profileAvatar.classList.remove(
+                "uploading"
+            );
+        }
+
+        if (profilePictureInput) {
+            profilePictureInput.value = "";
+        }
+    }
+}
+
+
+if (profileAvatar && profilePictureInput) {
+    profileAvatar.addEventListener(
+        "click",
+        () => profilePictureInput.click()
+    );
+
+    profilePictureInput.addEventListener(
+        "change",
+        () => {
+            const file =
+                profilePictureInput.files?.[0];
+
+            if (file) {
+                uploadProfilePicture(file);
+            }
+        }
+    );
+}
+
+
+loadUserProfile();

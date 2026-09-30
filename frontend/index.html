@@ -3,32 +3,250 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Expense Tracker</title>
-    <link rel="stylesheet" href="style.css">
+    <title>Expense Tracker & Savings Target</title>
+    <link rel="stylesheet" href="style.css?v=4">
 </head>
 
-<body>
+<body class="landing-page">
 
-    <div class="container">
-        <h1>Expense Tracker</h1>
+    <!-- NAVIGATION -->
+    <header class="landing-header">
+        <a href="index.html" class="landing-logo">
+            <span class="logo-mark">ET</span>
+            <span>Expense Tracker</span>
+        </a>
 
-        <div class="card">
-            <h2>Login</h2>
+        <nav class="landing-nav">
+            <a href="#features">Features</a>
+            <a href="#savings">Savings</a>
+            <a href="#login">Login</a>
+            <a href="register.html" class="nav-register">Sign Up</a>
+        </nav>
+    </header>
 
-            <input type="email" id="email" placeholder="Email">
-            <input type="password" id="password" placeholder="Password">
+    <main>
 
-            <button onclick="login()">Login</button>
+        <!-- HERO -->
+        <section class="landing-hero">
 
-            <p id="message"></p>
+            <div class="hero-content">
+                <span class="hero-eyebrow">
+                    SMARTER PERSONAL FINANCE
+                </span>
 
-            <p class="link">
-                Don't have an account?
-                <a href="register.html">Create an account</a>
-            </p>
+                <h1>
+                    Take control of your
+                    <span>money and savings.</span>
+                </h1>
+
+                <p class="hero-description">
+                    Track your expenses, manage Naira and Dollar
+                    savings, set financial targets and understand
+                    where your money goes — all from one dashboard.
+                </p>
+
+                <div class="hero-actions">
+                    <a href="#login" class="hero-primary">
+                        Login to Dashboard
+                    </a>
+
+                    <a href="register.html" class="hero-secondary">
+                        Create Account
+                    </a>
+                </div>
+
+                <div class="hero-trust">
+                    <span>✓ Expense tracking</span>
+                    <span>✓ Savings targets</span>
+                    <span>✓ NGN & USD accounts</span>
+                </div>
+            </div>
+
+            <!-- HERO LOGIN -->
+            <div class="hero-login-wrapper" id="login">
+
+                <div class="hero-login-card">
+
+                    <div class="hero-login-brand">
+                        <span class="logo-mark">ET</span>
+
+                        <div>
+                            <small>WELCOME BACK</small>
+                            <h2>Login to your account</h2>
+                        </div>
+                    </div>
+
+                    <p class="hero-login-description">
+                        Access your expenses, Naira and Dollar savings,
+                        savings targets and monthly statistics.
+                    </p>
+
+                    <label for="email">Email address</label>
+
+                    <input
+                        type="email"
+                        id="email"
+                        placeholder="you@example.com"
+                        autocomplete="email"
+                    >
+
+                    <label for="password">Password</label>
+
+                    <input
+                        type="password"
+                        id="password"
+                        placeholder="Enter your password"
+                        autocomplete="current-password"
+                    >
+
+                    <button
+                        onclick="login()"
+                        class="hero-login-button"
+                    >
+                        Login to Dashboard →
+                    </button>
+
+                    <p id="message"></p>
+
+                    <div class="hero-login-divider">
+                        <span>New here?</span>
+                    </div>
+
+                    <a
+                        href="register.html"
+                        class="hero-create-account"
+                    >
+                        Create an account
+                    </a>
+
+                    <div class="hero-login-features">
+                        <span>✓ Expense tracking</span>
+                        <span>✓ NGN & USD savings</span>
+                        <span>✓ Savings targets</span>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+
+        <!-- FEATURES -->
+        <section class="landing-features" id="features">
+
+            <article>
+                <div class="feature-icon">₦</div>
+                <h3>Track Expenses</h3>
+                <p>
+                    Record your income and expenses and keep
+                    your financial activity organized.
+                </p>
+            </article>
+
+            <article>
+                <div class="feature-icon">$</div>
+                <h3>Multiple Currencies</h3>
+                <p>
+                    Manage Naira and Dollar accounts separately
+                    without mixing your balances.
+                </p>
+            </article>
+
+            <article>
+                <div class="feature-icon">↗</div>
+                <h3>Savings Analytics</h3>
+                <p>
+                    Follow your monthly savings performance
+                    and see your progress over time.
+                </p>
+            </article>
+
+        </section>
+
+        <!-- SAVINGS -->
+        <section class="investment-section" id="savings">
+
+            <div class="section-heading">
+                <span>BUILD BETTER MONEY HABITS</span>
+
+                <h2>
+                    Reach your savings targets
+                    with greater clarity.
+                </h2>
+
+                <p>
+                    Create a savings goal, record your deposits
+                    and monitor your progress from one simple
+                    financial dashboard.
+                </p>
+            </div>
+
+            <div class="investment-grid">
+
+                <article class="investment-card dark-card">
+                    <span>YOUR TARGET</span>
+                    <h3>Save with purpose.</h3>
+
+                    <div class="target-bars">
+                        <i></i>
+                        <i></i>
+                        <i></i>
+                        <i></i>
+                        <i></i>
+                    </div>
+
+                    <strong>Stay consistent.</strong>
+                </article>
+
+                <article class="investment-card">
+                    <span>PROGRESS</span>
+                    <h3>Know how close you are.</h3>
+
+                    <div class="progress-circle">
+                        <div>
+                            <strong>80%</strong>
+                            <small>saved</small>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="investment-card">
+                    <span>MULTI-CURRENCY</span>
+                    <h3>Save in Naira and Dollars.</h3>
+
+                    <div class="currency-showcase">
+                        <div>
+                            <small>NGN SAVINGS</small>
+                            <strong>₦80,000,000</strong>
+                        </div>
+
+                        <div>
+                            <small>USD SAVINGS</small>
+                            <strong>$0.00</strong>
+                        </div>
+                    </div>
+                </article>
+
+            </div>
+
+        </section>
+
+
+
+    </main>
+
+    <footer class="landing-footer">
+        <div class="landing-logo">
+            <span class="logo-mark">ET</span>
+            <span>Expense Tracker & Savings Target</span>
         </div>
-    </div>
 
-    <script src="script.js"></script>
+        <p>Manage today. Save for tomorrow.</p>
+    </footer>
+
+    <script src="script.js?v=4"></script>
+
 </body>
 </html>

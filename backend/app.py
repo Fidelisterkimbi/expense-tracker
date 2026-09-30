@@ -3,11 +3,12 @@ from datetime import date, datetime, timedelta
 import os
 import secrets
 
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 from dotenv import load_dotenv
 from flask_bcrypt import Bcrypt
+from werkzeug.utils import secure_filename
 from flask_jwt_extended import (
     JWTManager,
     create_access_token,
@@ -28,12 +29,34 @@ db = SQLAlchemy(app)
 bcrypt = Bcrypt(app)
 jwt = JWTManager(app)
 
+PROFILE_UPLOAD_FOLDER = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    "uploads",
+    "profiles"
+)
+
+ALLOWED_PROFILE_EXTENSIONS = {
+    "jpg",
+    "jpeg",
+    "png",
+    "webp"
+}
+
+app.config["MAX_CONTENT_LENGTH"] = 5 * 1024 * 1024
+
+os.makedirs(
+    PROFILE_UPLOAD_FOLDER,
+    exist_ok=True
+)
+
+
 
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
+    profile_picture = db.Column(db.String(255), nullable=True)
 
     expenses = db.relationship(
         "Expense",
@@ -49,6 +72,7 @@ class Expense(db.Model):
     amount = db.Column(db.Float, nullable=False)
     category = db.Column(db.String(50), nullable=False)
     type = db.Column(db.String(20), nullable=False, default="expense")
+    currency = db.Column(db.String(3), nullable=False, default="NGN")
     description = db.Column(db.String(255))
     date = db.Column(db.Date, nullable=False, default=date.today)
 
@@ -86,6 +110,7 @@ class SavingsDeposit(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     amount = db.Column(db.Float, nullable=False)
+    currency = db.Column(db.String(3), nullable=False, default="NGN")
     saving_date = db.Column(db.Date, nullable=False, default=date.today)
     payment_reference = db.Column(db.String(150), unique=True)
     status = db.Column(db.String(30), nullable=False, default="pending")
@@ -260,6 +285,135 @@ def login():
 
 
 # -------------------------
+# USER PROFILE
+# -------------------------
+
+def allowed_profile_picture(filename):
+    return (
+        "." in filename
+        and filename.rsplit(".", 1)[1].lower()
+        in ALLOWED_PROFILE_EXTENSIONS
+    )
+
+
+@app.route("/profile", methods=["GET"])
+@jwt_required()
+def get_profile():
+    user_id = int(get_jwt_identity())
+
+    user = db.session.get(User, user_id)
+
+    if not user:
+        return jsonify({
+            "error": "User not found"
+        }), 404
+
+    picture_url = None
+
+    if user.profile_picture:
+        picture_url = (
+            "/profile/picture/"
+            + user.profile_picture
+        )
+
+    return jsonify({
+        "id": user.id,
+        "username": user.username,
+        "email": user.email,
+        "profile_picture": picture_url
+    }), 200
+
+
+@app.route("/profile/picture", methods=["POST"])
+@jwt_required()
+def upload_profile_picture():
+    user_id = int(get_jwt_identity())
+
+    user = db.session.get(User, user_id)
+
+    if not user:
+        return jsonify({
+            "error": "User not found"
+        }), 404
+
+    if "picture" not in request.files:
+        return jsonify({
+            "error": "Please select a profile picture"
+        }), 400
+
+    picture = request.files["picture"]
+
+    if not picture or not picture.filename:
+        return jsonify({
+            "error": "Please select a profile picture"
+        }), 400
+
+    if not allowed_profile_picture(picture.filename):
+        return jsonify({
+            "error": "Only JPG, JPEG, PNG and WEBP images are allowed"
+        }), 400
+
+    original_name = secure_filename(
+        picture.filename
+    )
+
+    extension = original_name.rsplit(
+        ".",
+        1
+    )[1].lower()
+
+    filename = (
+        f"user_{user.id}_"
+        f"{secrets.token_hex(8)}."
+        f"{extension}"
+    )
+
+    filepath = os.path.join(
+        PROFILE_UPLOAD_FOLDER,
+        filename
+    )
+
+    picture.save(filepath)
+
+    old_picture = user.profile_picture
+
+    user.profile_picture = filename
+    db.session.commit()
+
+    # Delete the previous picture after the
+    # database has successfully been updated.
+    if old_picture and old_picture != filename:
+        old_path = os.path.join(
+            PROFILE_UPLOAD_FOLDER,
+            old_picture
+        )
+
+        try:
+            if os.path.isfile(old_path):
+                os.remove(old_path)
+        except OSError:
+            pass
+
+    return jsonify({
+        "message": "Profile picture updated successfully",
+        "profile_picture": (
+            "/profile/picture/" + filename
+        )
+    }), 200
+
+
+@app.route(
+    "/profile/picture/<path:filename>",
+    methods=["GET"]
+)
+def serve_profile_picture(filename):
+    return send_from_directory(
+        PROFILE_UPLOAD_FOLDER,
+        filename
+    )
+
+
+# -------------------------
 # EXPENSES
 # -------------------------
 
@@ -302,11 +456,19 @@ def add_expense():
             "error": "Type must be income or expense"
         }), 400
 
+    currency = str(data.get("currency", "NGN")).upper()
+
+    if currency not in ("NGN", "USD"):
+        return jsonify({
+            "error": "Currency must be NGN or USD"
+        }), 400
+
     expense = Expense(
         title=data["title"],
         amount=data["amount"],
         category=data["category"],
         type=transaction_type,
+        currency=currency,
         description=data.get("description"),
         date=transaction_date,
         user_id=user_id
@@ -323,6 +485,7 @@ def add_expense():
             "amount": expense.amount,
             "category": expense.category,
             "type": expense.type,
+            "currency": expense.currency,
             "description": expense.description,
             "date": expense.date.isoformat()
         }
@@ -343,6 +506,7 @@ def get_expenses():
             "amount": expense.amount,
             "category": expense.category,
             "type": expense.type,
+            "currency": expense.currency,
             "description": expense.description,
             "date": expense.date.isoformat()
         }
@@ -377,6 +541,16 @@ def update_expense(id):
     if data.get("type") in ("income", "expense"):
         expense.type = data["type"]
 
+    if "currency" in data:
+        currency = str(data["currency"]).upper()
+
+        if currency not in ("NGN", "USD"):
+            return jsonify({
+                "error": "Currency must be NGN or USD"
+            }), 400
+
+        expense.currency = currency
+
     if data.get("date"):
         try:
             expense.date = datetime.strptime(
@@ -401,6 +575,7 @@ def update_expense(id):
             "amount": expense.amount,
             "category": expense.category,
             "type": expense.type,
+            "currency": expense.currency,
             "description": expense.description,
             "date": expense.date.isoformat()
         }
@@ -556,6 +731,7 @@ def get_savings():
             {
                 "id": deposit.id,
                 "amount": deposit.amount,
+                "currency": deposit.currency or "NGN",
                 "saving_date": deposit.saving_date.isoformat(),
                 "payment_reference": deposit.payment_reference,
                 "status": deposit.status
@@ -588,6 +764,15 @@ def record_savings_deposit():
             "error": "Amount must be greater than zero"
         }), 400
 
+    currency = str(
+        data.get("currency", "NGN")
+    ).upper()
+
+    if currency not in ("NGN", "USD"):
+        return jsonify({
+            "error": "Currency must be NGN or USD"
+        }), 400
+
     goal = SavingsGoal.query.filter_by(
         user_id=user_id
     ).first()
@@ -616,6 +801,7 @@ def record_savings_deposit():
 
     deposit = SavingsDeposit(
         amount=amount,
+        currency=currency,
         saving_date=deposit_date,
         payment_reference=reference,
         status="successful",
@@ -631,6 +817,7 @@ def record_savings_deposit():
         "deposit": {
             "id": deposit.id,
             "amount": deposit.amount,
+            "currency": deposit.currency,
             "saving_date": deposit.saving_date.isoformat(),
             "payment_reference": deposit.payment_reference,
             "status": deposit.status
@@ -688,6 +875,236 @@ def get_savings_goal():
             "progress": round(min(progress, 100), 2),
             "created_at": goal.created_at.isoformat()
         }
+    }), 200
+
+
+
+# -------------------------
+# SAVINGS ACCOUNTS
+# -------------------------
+
+@app.route("/savings/accounts", methods=["GET"])
+@jwt_required()
+def savings_accounts():
+    user_id = int(get_jwt_identity())
+
+    deposits = SavingsDeposit.query.filter_by(
+        user_id=user_id,
+        status="successful"
+    ).all()
+
+    accounts = {
+        "NGN": {
+            "balance": 0.0,
+            "deposit_count": 0
+        },
+        "USD": {
+            "balance": 0.0,
+            "deposit_count": 0
+        }
+    }
+
+    for deposit in deposits:
+        currency = (
+            deposit.currency or "NGN"
+        ).upper()
+
+        if currency not in accounts:
+            continue
+
+        accounts[currency]["balance"] += float(
+            deposit.amount
+        )
+
+        accounts[currency]["deposit_count"] += 1
+
+    for account in accounts.values():
+        account["balance"] = round(
+            account["balance"],
+            2
+        )
+
+    return jsonify(accounts), 200
+
+
+# -------------------------
+# MONTHLY SAVINGS STATISTICS
+# -------------------------
+
+@app.route(
+    "/savings/statistics/monthly",
+    methods=["GET"]
+)
+@jwt_required()
+def monthly_savings_statistics():
+    user_id = int(get_jwt_identity())
+
+    currency = request.args.get(
+        "currency",
+        "NGN"
+    ).upper()
+
+    if currency not in ("NGN", "USD"):
+        return jsonify({
+            "error": "Currency must be NGN or USD"
+        }), 400
+
+    today = date.today()
+
+    try:
+        start_year = int(
+            request.args.get(
+                "start_year",
+                today.year
+            )
+        )
+
+        start_month = int(
+            request.args.get(
+                "start_month",
+                1
+            )
+        )
+
+        end_year = int(
+            request.args.get(
+                "end_year",
+                today.year
+            )
+        )
+
+        end_month = int(
+            request.args.get(
+                "end_month",
+                today.month
+            )
+        )
+
+        start_date = date(
+            start_year,
+            start_month,
+            1
+        )
+
+        if end_month == 12:
+            end_date = date(
+                end_year + 1,
+                1,
+                1
+            )
+        else:
+            end_date = date(
+                end_year,
+                end_month + 1,
+                1
+            )
+
+    except (TypeError, ValueError):
+        return jsonify({
+            "error": "Invalid statistics date range"
+        }), 400
+
+    if start_date >= end_date:
+        return jsonify({
+            "error":
+                "Start month must not be after end month"
+        }), 400
+
+    deposits = SavingsDeposit.query.filter(
+        SavingsDeposit.user_id == user_id,
+        SavingsDeposit.status == "successful",
+        SavingsDeposit.currency == currency,
+        SavingsDeposit.saving_date >= start_date,
+        SavingsDeposit.saving_date < end_date
+    ).order_by(
+        SavingsDeposit.saving_date.asc()
+    ).all()
+
+    months = []
+
+    cursor_year = start_year
+    cursor_month = start_month
+
+    while (
+        cursor_year < end_year
+        or (
+            cursor_year == end_year
+            and cursor_month <= end_month
+        )
+    ):
+        months.append({
+            "year": cursor_year,
+            "month": cursor_month,
+            "label": date(
+                cursor_year,
+                cursor_month,
+                1
+            ).strftime("%b %Y"),
+            "saved": 0.0,
+            "deposit_count": 0
+        })
+
+        if cursor_month == 12:
+            cursor_month = 1
+            cursor_year += 1
+        else:
+            cursor_month += 1
+
+    lookup = {
+        (item["year"], item["month"]): item
+        for item in months
+    }
+
+    for deposit in deposits:
+        key = (
+            deposit.saving_date.year,
+            deposit.saving_date.month
+        )
+
+        month = lookup.get(key)
+
+        if not month:
+            continue
+
+        month["saved"] += float(
+            deposit.amount
+        )
+
+        month["deposit_count"] += 1
+
+    total_saved = 0.0
+    total_deposits = 0
+
+    for month in months:
+        month["saved"] = round(
+            month["saved"],
+            2
+        )
+
+        total_saved += month["saved"]
+        total_deposits += month["deposit_count"]
+
+    return jsonify({
+        "currency": currency,
+
+        "range": {
+            "start": start_date.isoformat(),
+            "end": date(
+                end_year,
+                end_month,
+                1
+            ).isoformat()
+        },
+
+        "summary": {
+            "saved": round(
+                total_saved,
+                2
+            ),
+            "deposit_count": total_deposits
+        },
+
+        "months": months
     }), 200
 
 

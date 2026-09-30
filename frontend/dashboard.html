@@ -4,223 +4,461 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - Expense Tracker</title>
-    <link rel="stylesheet" href="style.css?v=2">
+    <link rel="stylesheet" href="style.css?v=3">
 </head>
 
-<body>
+<body class="finance-dashboard">
 
-<div class="dashboard-container">
+<div class="app-shell">
 
-    <div class="dashboard-header">
-        <h1>Expense Tracker</h1>
-        <button class="logout-btn">Logout</button>
-    </div>
+    <!-- TOP NAVIGATION -->
+    <header class="finance-nav">
+        <a class="brand" href="dashboard.html">
+            <span class="brand-mark">E</span>
+            <span>Expense Tracker</span>
+        </a>
 
-    <h2>Dashboard</h2>
+        <nav class="main-nav">
+            <a href="#dashboard" class="active">Dashboard</a>
+            <a href="#transactions">Transactions</a>
+            <a href="#savings">Savings</a>
+            <a href="#accounts">Accounts</a>
+        </nav>
 
-    <div class="summary">
+        <div class="nav-actions">
+            <button class="icon-button" type="button" aria-label="Notifications">♢</button>
 
-        <div class="summary-card">
-            <h3>Balance</h3>
-            <p id="balance">₦0</p>
-        </div>
+            <div class="profile-chip">
 
-        <div class="summary-card">
-            <h3>Total Income</h3>
-            <p id="income">₦0</p>
-        </div>
+                <button
+                    type="button"
+                    class="profile-avatar profile-avatar-button"
+                    id="profileAvatar"
+                    aria-label="Change profile picture"
+                    title="Change profile picture"
+                >
+                    <img
+                        id="profileImage"
+                        alt="Profile picture"
+                        hidden
+                    >
+                    <span id="profileInitials">FT</span>
+                    <span class="profile-camera">+</span>
+                </button>
 
-        <div class="summary-card">
-            <h3>Total Expenses</h3>
-            <p id="expenses">₦0</p>
-        </div>
+                <input
+                    type="file"
+                    id="profilePictureInput"
+                    accept="image/jpeg,image/png,image/webp"
+                    hidden
+                >
 
-    </div>
+                <div class="profile-details">
+                    <strong id="profileUsername">My Account</strong>
+                    <span>Personal</span>
+                </div>
 
-    <!-- SAVINGS SECTION -->
-
-    <div class="card savings-section">
-
-        <h2>My Savings</h2>
-
-        <div class="summary">
-
-            <div class="summary-card">
-                <h3>Saving Goal</h3>
-                <p id="savingTarget">₦0</p>
             </div>
 
-            <div class="summary-card">
-                <h3>Amount Saved</h3>
-                <p id="amountSaved">₦0</p>
+            <button class="logout-btn">Logout</button>
+        </div>
+    </header>
+
+    <main class="dashboard-page" id="dashboard">
+
+        <!-- PAGE HEADING -->
+        <section class="dashboard-title">
+            <div>
+                <p class="eyebrow">OVERVIEW</p>
+                <h1>Financial Dashboard</h1>
+                <p>Track your money, savings and spending in one place.</p>
             </div>
 
-            <div class="summary-card">
-                <h3>Remaining</h3>
-                <p id="savingRemaining">₦0</p>
+            <button class="primary-action" type="button" onclick="document.getElementById('title').focus()">
+                + Add Transaction
+            </button>
+        </section>
+
+        <!-- SUMMARY CARDS -->
+        <section class="finance-summary">
+
+            <article class="metric-card">
+                <div class="metric-icon income-icon">↗</div>
+                <div>
+                    <span>Total Income</span>
+                    <strong id="income">₦0</strong>
+                    <small>Money received</small>
+                </div>
+            </article>
+
+            <article class="metric-card">
+                <div class="metric-icon expense-icon">↙</div>
+                <div>
+                    <span>Total Expenses</span>
+                    <strong id="expenses">₦0</strong>
+                    <small>Money spent</small>
+                </div>
+            </article>
+
+            <article class="metric-card">
+                <div class="metric-icon savings-icon">◇</div>
+                <div>
+                    <span>Total Savings</span>
+                    <strong id="amountSaved">₦0</strong>
+                    <small>Saved toward your goal</small>
+                </div>
+            </article>
+
+        </section>
+
+        <section class="dashboard-grid">
+
+            <!-- MAIN COLUMN -->
+            <div class="dashboard-main">
+
+                <!-- SAVINGS ANALYTICS -->
+                <article class="panel balance-panel">
+
+                    <div class="panel-heading">
+                        <div>
+                            <span class="panel-label">SAVINGS ANALYTICS</span>
+                            <h2>Monthly Savings</h2>
+                        </div>
+
+                        <div class="statistics-controls">
+                            <select id="statisticsCurrency">
+                                <option value="NGN">NGN (₦)</option>
+                                <option value="USD">USD ($)</option>
+                            </select>
+
+                            <input
+                                type="month"
+                                id="statisticsStartMonth"
+                                aria-label="Savings statistics start month"
+                            >
+
+                            <span>to</span>
+
+                            <input
+                                type="month"
+                                id="statisticsEndMonth"
+                                aria-label="Savings statistics end month"
+                            >
+                        </div>
+                    </div>
+
+                    <div class="statistics-summary">
+                        <div>
+                            <span>Total Saved</span>
+                            <strong id="statisticsSaved">₦0</strong>
+                        </div>
+
+                        <div>
+                            <span>Deposits</span>
+                            <strong id="statisticsDepositCount">0</strong>
+                        </div>
+                    </div>
+
+                    <div
+                        id="monthlyChart"
+                        class="monthly-chart"
+                        aria-label="Monthly savings chart"
+                    ></div>
+
+                    <div class="chart-legend">
+                        <span>
+                            <i class="income-legend"></i>
+                            Savings
+                        </span>
+                    </div>
+
+                </article>
+
+                <!-- TRANSACTIONS -->
+                <article class="panel transactions-panel" id="transactions">
+
+                    <div class="panel-heading">
+                        <div>
+                            <span class="panel-label">ACTIVITY</span>
+                            <h2>Recent Transactions</h2>
+                        </div>
+
+                        <span id="transactionCount"></span>
+                    </div>
+
+                    <div class="transaction-filters">
+                        <input
+                            type="search"
+                            id="transactionSearch"
+                            placeholder="Search transactions"
+                        >
+
+                        <select id="transactionTypeFilter">
+                            <option value="all">All Types</option>
+                            <option value="income">Income</option>
+                            <option value="expense">Expense</option>
+                        </select>
+
+                        <select id="transactionCategoryFilter">
+                            <option value="all">All Categories</option>
+                        </select>
+
+                        <input
+                            type="date"
+                            id="transactionDateFilter"
+                        >
+                    </div>
+
+                    <div id="transactionList" class="modern-transaction-list">
+                        <p>No transactions yet.</p>
+                    </div>
+
+                </article>
+
+                <!-- ADD TRANSACTION -->
+                <article class="panel transaction-form">
+
+                    <div class="panel-heading">
+                        <div>
+                            <span class="panel-label">NEW ENTRY</span>
+                            <h2>Add Transaction</h2>
+                        </div>
+                    </div>
+
+                    <div class="form-grid">
+
+                        <div class="field">
+                            <label for="title">Title</label>
+                            <input
+                                type="text"
+                                id="title"
+                                placeholder="e.g. Groceries"
+                            >
+                        </div>
+
+                        <div class="field">
+                            <label for="amount">Amount</label>
+                            <input
+                                type="number"
+                                id="amount"
+                                placeholder="0.00"
+                            >
+                        </div>
+
+                        <div class="field">
+                            <label for="type">Type</label>
+                            <select id="type">
+                                <option value="income">Income</option>
+                                <option value="expense">Expense</option>
+                            </select>
+                        </div>
+
+
+
+                        <div class="field">
+                            <label for="category">Category</label>
+                            <input
+                                type="text"
+                                id="category"
+                                placeholder="Food, Salary, Transport..."
+                            >
+                        </div>
+
+                        <div class="field">
+                            <label for="transactionDate">Date</label>
+                            <input
+                                type="date"
+                                id="transactionDate"
+                            >
+                        </div>
+
+                        <div class="field">
+                            <label for="description">Description</label>
+                            <input
+                                type="text"
+                                id="description"
+                                placeholder="Optional description"
+                            >
+                        </div>
+
+                    </div>
+
+                    <button id="addTransaction" class="primary-button">
+                        Add Transaction
+                    </button>
+
+                    <p id="transactionMessage"></p>
+
+                </article>
+
             </div>
 
-        </div>
+            <!-- RIGHT SIDEBAR -->
+            <aside class="dashboard-sidebar">
 
-        <div class="savings-progress">
-            <h3>Progress</h3>
+                <!-- ACCOUNTS -->
+                <article class="panel accounts-panel" id="accounts">
 
-            <div class="progress-track">
-                <div id="savingProgressBar" class="progress-bar"></div>
-            </div>
+                    <div class="panel-heading">
+                        <div>
+                            <span class="panel-label">WALLETS</span>
+                            <h2>My Accounts</h2>
+                        </div>
+                    </div>
 
-            <p id="savingProgress">0%</p>
-        </div>
+                    <div class="account-card naira-account">
+                        <div class="account-card-top">
+                            <span>NAIRA ACCOUNT</span>
+                            <span class="currency-symbol">₦</span>
+                        </div>
 
-        <hr>
+                        <strong id="nairaAccountBalance">₦0</strong>
+                        <small>Primary balance</small>
 
-        <h3>Set Savings Goal</h3>
+                        <div class="account-decoration"></div>
+                    </div>
 
-        <input
-            type="text"
-            id="savingGoalName"
-            placeholder="Goal name e.g. New Laptop"
-        >
+                    <div class="account-card dollar-account">
+                        <div class="account-card-top">
+                            <span>DOLLAR ACCOUNT</span>
+                            <span class="currency-symbol">$</span>
+                        </div>
 
-        <input
-            type="number"
-            id="savingGoalAmount"
-            placeholder="Target amount"
-        >
+                        <strong id="dollarAccountBalance">$0.00</strong>
+                        <small>USD balance</small>
 
-        <button id="saveGoal">
-            Set / Update Goal
-        </button>
+                        <div class="account-decoration"></div>
+                    </div>
 
-        <p id="savingGoalMessage"></p>
+                    <p class="account-note">
+                        Naira and Dollar balances are kept separate.
+                    </p>
 
-        <hr>
+                </article>
 
-        <h3>Save Money</h3>
+                <!-- SAVINGS -->
+                <article class="panel savings-section" id="savings">
 
-        <div class="payment-details">
-            <p><strong>Bank:</strong> OPay</p>
+                    <div class="panel-heading">
+                        <div>
+                            <span class="panel-label">GOALS</span>
+                            <h2>My Savings</h2>
+                        </div>
+                    </div>
 
-            <p>
-                <strong>Account Number:</strong>
-                9127594805
-            </p>
+                    <div class="savings-goal-overview">
+                        <div>
+                            <span>Goal</span>
+                            <strong id="savingTarget">₦0</strong>
+                        </div>
 
-            <p>
-                <strong>Account Name:</strong>
-                FIDELIS TERKIMBI SANJO
-            </p>
-        </div>
+                        <div>
+                            <span>Remaining</span>
+                            <strong id="savingRemaining">₦0</strong>
+                        </div>
+                    </div>
 
-        <p>
-            After making your transfer, record the amount below.
-        </p>
+                    <div class="savings-progress">
+                        <div class="progress-heading">
+                            <span>Progress</span>
+                            <strong id="savingProgress">0%</strong>
+                        </div>
 
-        <input
-            type="number"
-            id="savingDepositAmount"
-            placeholder="Amount transferred"
-            min="1"
-            step="0.01"
-        >
+                        <div class="progress-track">
+                            <div id="savingProgressBar" class="progress-bar"></div>
+                        </div>
+                    </div>
 
-        <input
-            type="date"
-            id="savingDepositDate"
-        >
+                    <div class="sidebar-divider"></div>
 
-        <button id="recordSaving">
-            Record Saving
-        </button>
+                    <h3>Set Savings Goal</h3>
 
-        <p id="savingDepositMessage"></p>
+                    <div class="field">
+                        <label for="savingGoalName">Goal name</label>
+                        <input
+                            type="text"
+                            id="savingGoalName"
+                            placeholder="e.g. New Laptop"
+                        >
+                    </div>
 
-        <hr>
+                    <div class="field">
+                        <label for="savingGoalAmount">Target amount</label>
+                        <input
+                            type="number"
+                            id="savingGoalAmount"
+                            placeholder="₦0"
+                        >
+                    </div>
 
-        <h3>Savings History</h3>
+                    <button id="saveGoal" class="secondary-button">
+                        Set / Update Goal
+                    </button>
 
-        <div id="savingsHistory">
-            <p>No savings yet.</p>
-        </div>
+                    <p id="savingGoalMessage"></p>
 
-    </div>
+                    <div class="sidebar-divider"></div>
 
-    <div class="card transaction-form">
-        <h2>Add Transaction</h2>
+                    <h3>Save Money</h3>
 
-        <input
-            type="text"
-            id="title"
-            placeholder="Title e.g. Groceries, Salary, Transport"
-        >
+                    <div class="payment-details">
+                        <span>OPay Savings Account</span>
+                        <strong>9127594805</strong>
+                        <small>FIDELIS TERKIMBI SANJO</small>
+                    </div>
 
-        <input type="number" id="amount" placeholder="Amount">
+                    <div class="field">
+                        <label for="savingCurrency">Savings Account</label>
+                        <select id="savingCurrency">
+                            <option value="NGN">Naira Savings (₦)</option>
+                            <option value="USD">Dollar Savings ($)</option>
+                        </select>
+                    </div>
 
-        <select id="type">
-            <option value="income">Income</option>
-            <option value="expense">Expense</option>
-        </select>
+                    <div class="field">
+                        <label for="savingDepositAmount">Amount</label>
+                        <input
+                            type="number"
+                            id="savingDepositAmount"
+                            placeholder="₦0"
+                            min="1"
+                            step="0.01"
+                        >
+                    </div>
 
-        <input
-            type="text"
-            id="category"
-            placeholder="Category e.g. Food, Salary, Transport"
-        >
+                    <div class="field">
+                        <label for="savingDepositDate">Date</label>
+                        <input
+                            type="date"
+                            id="savingDepositDate"
+                        >
+                    </div>
 
-        <input
-            type="date"
-            id="transactionDate"
-        >
+                    <button id="recordSaving" class="primary-button">
+                        Record Saving
+                    </button>
 
-        <input
-            type="text"
-            id="description"
-            placeholder="Description"
-        >
+                    <p id="savingDepositMessage"></p>
 
-        <button id="addTransaction">Add Transaction</button>
+                    <div class="sidebar-divider"></div>
 
-        <p id="transactionMessage"></p>
-    </div>
+                    <h3>Savings History</h3>
 
-    <div class="card">
-        <h2>Recent Transactions</h2>
+                    <div id="savingsHistory" class="savings-history">
+                        <p>No savings yet.</p>
+                    </div>
 
-        <div class="transaction-filters">
+                </article>
 
-            <input
-                type="search"
-                id="transactionSearch"
-                placeholder="Search transactions"
-            >
+            </aside>
 
-            <select id="transactionTypeFilter">
-                <option value="all">All Types</option>
-                <option value="income">Income</option>
-                <option value="expense">Expense</option>
-            </select>
+        </section>
 
-            <select id="transactionCategoryFilter">
-                <option value="all">All Categories</option>
-            </select>
-
-            <input
-                type="date"
-                id="transactionDateFilter"
-            >
-
-        </div>
-
-        <p id="transactionCount"></p>
-
-        <div id="transactionList">
-            <p>No transactions yet.</p>
-        </div>
-    </div>
+    </main>
 
 </div>
 
-<script src="dashboard.js"></script>
+<script src="dashboard.js?v=3"></script>
 
 </body>
 </html>
