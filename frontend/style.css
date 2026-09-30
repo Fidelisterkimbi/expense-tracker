@@ -3035,3 +3035,490 @@ hr {
     font-size: 11px;
     opacity: 0.65;
 }
+
+/* ==========================================
+   SAVINGS / EXPENSES PAGE NAVIGATION FIX
+   Keep page navigation accessible on all sizes
+   ========================================== */
+
+@media (max-width: 1100px) {
+    .finance-nav {
+        flex-wrap: wrap;
+    }
+
+    .main-nav {
+        display: flex !important;
+        order: 3;
+        width: 100%;
+        height: 52px;
+        margin-top: 8px;
+        gap: 8px;
+        border-top: 1px solid #eeeeF5;
+    }
+
+    .main-nav a {
+        flex: 1;
+        min-width: 0;
+        height: 52px;
+        padding: 0 14px;
+        font-weight: 600;
+    }
+}
+
+@media (max-width: 560px) {
+    .main-nav {
+        display: flex !important;
+    }
+
+    .main-nav a {
+        font-size: 13px;
+    }
+}
+
+
+/* ==========================================
+   LOGIN HERO PROFILE PHOTO
+   ========================================== */
+
+.hero-login-wrapper {
+    position: relative;
+}
+
+.login-profile-photo {
+    position: absolute;
+    width: 145px;
+    height: 180px;
+
+    left: -95px;
+    top: -45px;
+
+    z-index: 5;
+
+    padding: 5px;
+    border-radius: 22px;
+
+    background: rgba(255,255,255,.95);
+
+    box-shadow:
+        0 25px 60px rgba(0,0,0,.30),
+        0 0 0 1px rgba(255,255,255,.12);
+
+    transform: rotate(-3deg);
+}
+
+.login-profile-photo img {
+    display: block;
+
+    width: 100%;
+    height: 100%;
+
+    object-fit: cover;
+    object-position: center top;
+
+    border-radius: 17px;
+}
+
+.login-photo-glow {
+    position: absolute;
+
+    width: 120px;
+    height: 120px;
+
+    left: -25px;
+    top: -25px;
+
+    z-index: -1;
+
+    border-radius: 50%;
+
+    background: rgba(201,245,54,.28);
+    filter: blur(35px);
+}
+
+.login-photo-badge {
+    position: absolute;
+
+    left: 50%;
+    bottom: -14px;
+
+    transform: translateX(-50%);
+
+    min-width: 130px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+
+    padding: 8px 11px;
+
+    border-radius: 999px;
+
+    background: #ffffff;
+
+    color: #17221e;
+
+    font-size: 10px;
+    font-weight: 800;
+
+    white-space: nowrap;
+
+    box-shadow: 0 10px 25px rgba(0,0,0,.18);
+}
+
+.login-status-dot {
+    width: 7px;
+    height: 7px;
+
+    flex: 0 0 7px;
+
+    border-radius: 50%;
+
+    background: var(--landing-green);
+
+    box-shadow: 0 0 0 3px rgba(201,245,54,.20);
+}
+
+
+/* Keep portrait from covering login on smaller screens */
+
+@media (max-width: 1100px) {
+
+    .login-profile-photo {
+        width: 110px;
+        height: 140px;
+
+        left: -45px;
+        top: -55px;
+    }
+}
+
+
+@media (max-width: 900px) {
+
+    .login-profile-photo {
+        position: relative;
+
+        width: 125px;
+        height: 155px;
+
+        left: auto;
+        top: auto;
+
+        margin: 0 auto -25px;
+
+        transform: rotate(-2deg);
+    }
+
+    .hero-login-card {
+        position: relative;
+        z-index: 2;
+    }
+}
+
+
+@media (max-width: 560px) {
+
+    .login-profile-photo {
+        width: 105px;
+        height: 130px;
+
+        margin-bottom: -18px;
+    }
+
+    .login-photo-badge {
+        min-width: 115px;
+        font-size: 9px;
+    }
+}
+
+
+/* ==========================================
+   LOGIN PHOTO VISIBILITY FIX
+   ========================================== */
+
+.hero-login-wrapper {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.login-profile-photo {
+    position: relative !important;
+
+    width: 130px !important;
+    height: 155px !important;
+
+    left: auto !important;
+    top: auto !important;
+
+    margin: 0 auto -32px !important;
+
+    z-index: 10;
+
+    padding: 5px;
+
+    border-radius: 24px;
+
+    background: #ffffff;
+
+    box-shadow:
+        0 20px 45px rgba(0,0,0,.30),
+        0 0 0 4px rgba(201,245,54,.15);
+
+    transform: rotate(-2deg);
+}
+
+.login-profile-photo img {
+    display: block !important;
+
+    width: 100% !important;
+    height: 100% !important;
+
+    object-fit: cover;
+    object-position: center top;
+
+    border-radius: 19px;
+}
+
+.hero-login-card {
+    position: relative;
+    z-index: 2;
+
+    width: 100%;
+
+    padding-top: 55px !important;
+}
+
+.login-photo-badge {
+    bottom: -12px;
+    z-index: 12;
+}
+
+
+@media (max-width: 900px) {
+
+    .login-profile-photo {
+        width: 120px !important;
+        height: 145px !important;
+        margin-bottom: -28px !important;
+    }
+
+}
+
+
+@media (max-width: 560px) {
+
+    .login-profile-photo {
+        width: 105px !important;
+        height: 125px !important;
+        margin-bottom: -24px !important;
+    }
+
+    .hero-login-card {
+        padding-top: 48px !important;
+    }
+
+}
+
+
+/* ==========================================
+   FINANCIAL RED ACCENT SYSTEM
+   Used for expenses, losses, errors & danger
+   ========================================== */
+
+:root {
+    --finance-red: #e5484d;
+    --finance-red-dark: #c9343a;
+    --finance-red-soft: #fff1f1;
+    --finance-red-border: #ffd6d6;
+}
+
+/* Expense metric/icon */
+.expense-icon {
+    color: var(--finance-red) !important;
+    background: var(--finance-red-soft) !important;
+}
+
+/* Expense amounts */
+.expense-amount,
+.amount-expense,
+.transaction-expense .transaction-amount {
+    color: var(--finance-red) !important;
+}
+
+/* Expense labels */
+.expense-label {
+    color: var(--finance-red) !important;
+}
+
+/* Delete / destructive actions */
+.delete-btn,
+.danger-button,
+.btn-danger {
+    color: var(--finance-red) !important;
+    border-color: var(--finance-red-border) !important;
+    background: var(--finance-red-soft) !important;
+}
+
+.delete-btn:hover,
+.danger-button:hover,
+.btn-danger:hover {
+    color: #fff !important;
+    background: var(--finance-red) !important;
+    border-color: var(--finance-red) !important;
+}
+
+/* Error messages */
+.error,
+.error-message,
+.form-error {
+    color: var(--finance-red) !important;
+}
+
+/* Invalid fields */
+input:invalid:not(:placeholder-shown) {
+    border-color: var(--finance-red);
+}
+
+/* Keep red subtle — don't replace primary brand actions */
+
+
+/* ==========================================
+   EXPENSE PAGE — RED FINANCIAL ACCENTS
+   ========================================== */
+
+/* Total Expenses number */
+.finance-dashboard #expenses {
+    color: var(--finance-red) !important;
+}
+
+/* Expense icon */
+.finance-dashboard .expense-icon {
+    color: var(--finance-red) !important;
+    background: var(--finance-red-soft) !important;
+    border: 1px solid var(--finance-red-border);
+}
+
+/* Subtle red accent on expense card */
+.finance-dashboard .metric-card:has(#expenses) {
+    border-color: var(--finance-red-border);
+    background:
+        linear-gradient(
+            135deg,
+            #ffffff 0%,
+            var(--finance-red-soft) 100%
+        );
+}
+
+/* Expense card hover */
+.finance-dashboard .metric-card:has(#expenses):hover {
+    border-color: var(--finance-red);
+}
+
+/* Expense statistics */
+#statisticsExpenses {
+    color: var(--finance-red) !important;
+}
+
+/* Negative net balance */
+.negative-value {
+    color: var(--finance-red) !important;
+}
+
+/* Positive values remain green */
+.positive-value {
+    color: #2f9e44 !important;
+}
+
+
+/* ==========================================
+   TRANSACTION MONEY COLOURS
+   ========================================== */
+
+.transaction-amount {
+    font-weight: 800 !important;
+    font-size: 14px;
+    white-space: nowrap;
+}
+
+/* Money coming in */
+.income-amount {
+    color: #2f9e44 !important;
+}
+
+/* Money going out */
+.expense-amount {
+    color: var(--finance-red) !important;
+}
+
+/* Slight expense-row indicator */
+.transaction-item:has(.expense-amount) {
+    border-left: 3px solid transparent;
+}
+
+.transaction-item:has(.expense-amount):hover {
+    border-left-color: var(--finance-red);
+}
+
+/* Income-row indicator */
+.transaction-item:has(.income-amount) {
+    border-left: 3px solid transparent;
+}
+
+.transaction-item:has(.income-amount):hover {
+    border-left-color: #2f9e44;
+}
+
+
+/* ==========================================
+   SAVINGS PAGE — RED FINANCIAL ACCENTS
+   ========================================== */
+
+/* Remaining amount to reach savings target */
+#savingRemaining {
+    color: var(--finance-red) !important;
+}
+
+/* Saved amount stays positive/green */
+#amountSaved {
+    color: #2f9e44 !important;
+}
+
+/* Savings target stays strong but neutral */
+#savingTarget {
+    color: #202124;
+}
+
+/* Naira/Dollar savings balances */
+#nairaAccountBalance,
+#dollarAccountBalance {
+    color: #2f9e44;
+}
+
+/* Failed savings messages */
+.savings-error,
+.saving-error {
+    color: var(--finance-red) !important;
+}
+
+/* Optional warning state */
+.savings-warning {
+    padding: 10px 12px;
+    color: var(--finance-red);
+    background: var(--finance-red-soft);
+    border: 1px solid var(--finance-red-border);
+    border-radius: 8px;
+}
+
+/* Goal progress becomes red only when explicitly
+   given the low-progress class by JavaScript */
+.saving-progress-low {
+    background: var(--finance-red) !important;
+}
+
+/* Successful/healthy progress */
+.saving-progress-good {
+    background: #2f9e44 !important;
+}

@@ -28,3 +28,6 @@ backend/.venv/
 
 # Node dependencies
 node_modules/
+
+# Temporary development snapshots
+*-before-*

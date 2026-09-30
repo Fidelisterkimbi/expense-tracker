@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Expense Tracker</title>
+    <link rel="stylesheet" href="style.css?v=9">
+</head>
+
+<body class="finance-dashboard">
+
+<div class="app-shell">
+
+    <!-- TOP NAVIGATION -->
+    <header class="finance-nav">
+        <a class="brand" href="dashboard.html">
+            <span class="brand-mark">E</span>
+            <span>Expense Tracker</span>
+        </a>
+
+        <nav class="main-nav">
+            <a href="dashboard.html">Savings</a>
+            <a href="expenses.html" class="active">Expenses</a>
+        </nav>
+
+        <div class="nav-actions">
+            <button class="icon-button" type="button" aria-label="Notifications">♢</button>
+
+            <div class="profile-chip">
+
+                <button
+                    type="button"
+                    class="profile-avatar profile-avatar-button"
+                    id="profileAvatar"
+                    aria-label="Change profile picture"
+                    title="Change profile picture"
+                >
+                    <img
+                        id="profileImage"
+                        alt="Profile picture"
+                        hidden
+                    >
+                    <span id="profileInitials">FT</span>
+                    <span class="profile-camera">+</span>
+                </button>
+
+                <input
+                    type="file"
+                    id="profilePictureInput"
+                    accept="image/jpeg,image/png,image/webp"
+                    hidden
+                >
+
+                <div class="profile-details">
+                    <strong id="profileUsername">My Account</strong>
+                    <span>Personal</span>
+                </div>
+
+            </div>
+
+            <button class="logout-btn">Logout</button>
+        </div>
+    </header>
+
+    <main class="dashboard-page" id="dashboard">
+
+        <!-- PAGE HEADING -->
+        <section class="dashboard-title">
+            <div>
+                <p class="eyebrow">FINANCIAL OVERVIEW</p>
+                <h1>Expense Dashboard</h1>
+                <p>Track your income, expenses and monthly spending.</p>
+            </div>
+
+            <button
+                class="primary-action"
+                type="button"
+                onclick="document.getElementById('title').focus()"
+            >
+                + Add Transaction
+            </button>
+        </section>
+
+        <!-- SUMMARY CARDS -->
+        <section class="finance-summary">
+
+            <article class="metric-card">
+                <div class="metric-icon income-icon">↗</div>
+                <div>
+                    <span>Total Income</span>
+                    <strong id="income">₦0</strong>
+                    <small>Money received</small>
+                </div>
+            </article>
+
+            <article class="metric-card">
+                <div class="metric-icon expense-icon">↙</div>
+                <div>
+                    <span>Total Expenses</span>
+                    <strong id="expenses">₦0</strong>
+                    <small>Money spent</small>
+                </div>
+            </article>
+
+            <article class="metric-card">
+                <div class="metric-icon savings-icon">◇</div>
+                <div>
+                    <span>Balance</span>
+                    <strong id="balance">₦0</strong>
+                    <small>Income minus expenses</small>
+                </div>
+            </article>
+
+        </section>
+
+        <section class="dashboard-grid">
+
+            <!-- MAIN COLUMN -->
+            <div class="dashboard-main">
+
+                <!-- FINANCIAL ANALYTICS -->
+                <article class="panel balance-panel">
+
+                    <div class="panel-heading">
+                        <div>
+                            <span class="panel-label">FINANCIAL ANALYTICS</span>
+                            <h2>Monthly Income & Expenses</h2>
+                        </div>
+
+                        <div class="statistics-controls">
+                            <select id="statisticsCurrency">
+                                <option value="NGN">NGN (₦)</option>
+                                <option value="USD">USD ($)</option>
+                            </select>
+
+                            <input
+                                type="month"
+                                id="statisticsStartMonth"
+                                aria-label="Statistics start month"
+                            >
+
+                            <span>to</span>
+
+                            <input
+                                type="month"
+                                id="statisticsEndMonth"
+                                aria-label="Statistics end month"
+                            >
+                        </div>
+                    </div>
+
+                    <div class="statistics-summary">
+
+                        <div>
+                            <span>Income</span>
+                            <strong id="statisticsIncome">₦0</strong>
+                        </div>
+
+                        <div>
+                            <span>Expenses</span>
+                            <strong id="statisticsExpenses">₦0</strong>
+                        </div>
+
+                        <div>
+                            <span>Net</span>
+                            <strong id="statisticsNet">₦0</strong>
+                        </div>
+
+                    </div>
+
+                    <div
+                        id="monthlyChart"
+                        class="monthly-chart"
+                        aria-label="Monthly income and expenses chart"
+                    ></div>
+
+                    <div class="chart-legend">
+                        <span>
+                            <i class="income-legend"></i>
+                            Income
+                        </span>
+
+                        <span>
+                            <i class="expense-legend"></i>
+                            Expenses
+                        </span>
+                    </div>
+
+                </article>
+
+                <!-- TRANSACTIONS -->
+                <article
+                    class="panel transactions-panel"
+                    id="transactions"
+                >
+
+                    <div class="panel-heading">
+                        <div>
+                            <span class="panel-label">ACTIVITY</span>
+                            <h2>Recent Transactions</h2>
+                        </div>
+
+                        <span id="transactionCount"></span>
+                    </div>
+
+                    <div class="transaction-filters">
+
+                        <input
+                            type="search"
+                            id="transactionSearch"
+                            placeholder="Search transactions"
+                        >
+
+                        <select id="transactionTypeFilter">
+                            <option value="all">All Types</option>
+                            <option value="income">Income</option>
+                            <option value="expense">Expense</option>
+                        </select>
+
+                        <select id="transactionCategoryFilter">
+                            <option value="all">All Categories</option>
+                        </select>
+
+                        <input
+                            type="date"
+                            id="transactionDateFilter"
+                        >
+
+                    </div>
+
+                    <div
+                        id="transactionList"
+                        class="modern-transaction-list"
+                    >
+                        <p>No transactions yet.</p>
+                    </div>
+
+                </article>
+
+            </div>
+
+            <!-- RIGHT COLUMN -->
+            <aside class="dashboard-sidebar">
+
+                <!-- ADD TRANSACTION -->
+                <article class="panel transaction-form">
+
+                    <div class="panel-heading">
+                        <div>
+                            <span class="panel-label">NEW ENTRY</span>
+                            <h2>Add Transaction</h2>
+                        </div>
+                    </div>
+
+                    <div class="field">
+                        <label for="title">Title</label>
+                        <input
+                            type="text"
+                            id="title"
+                            placeholder="e.g. Groceries"
+                        >
+                    </div>
+
+                    <div class="field">
+                        <label for="amount">Amount</label>
+                        <input
+                            type="number"
+                            id="amount"
+                            placeholder="0.00"
+                            min="0.01"
+                            step="0.01"
+                        >
+                    </div>
+
+                    <div class="field">
+                        <label for="type">Type</label>
+
+                        <select id="type">
+                            <option value="income">Income</option>
+                            <option value="expense">Expense</option>
+                        </select>
+                    </div>
+
+                    <div class="field">
+                        <label for="currency">
+                            Account / Currency
+                        </label>
+
+                        <select id="currency">
+                            <option value="NGN">
+                                Naira Account (₦)
+                            </option>
+
+                            <option value="USD">
+                                Dollar Account ($)
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="field">
+                        <label for="category">Category</label>
+
+                        <input
+                            type="text"
+                            id="category"
+                            placeholder="e.g. Food"
+                        >
+                    </div>
+
+                    <div class="field">
+                        <label for="transactionDate">Date</label>
+
+                        <input
+                            type="date"
+                            id="transactionDate"
+                        >
+                    </div>
+
+                    <div class="field">
+                        <label for="description">Description</label>
+
+                        <textarea
+                            id="description"
+                            placeholder="Optional note"
+                        ></textarea>
+                    </div>
+
+                    <button
+                        id="addTransaction"
+                        class="primary-button"
+                    >
+                        Add Transaction
+                    </button>
+
+                    <p id="transactionMessage"></p>
+
+                </article>
+
+            </aside>
+
+        </section>
+
+    </main>
+
+</div>
+
+<script src="expenses.js?v=2"></script>
+
+</body>
+</html>

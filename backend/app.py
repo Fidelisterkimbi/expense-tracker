@@ -623,6 +623,268 @@ def expense_summary():
     })
 
 
+
+# -------------------------
+# EXPENSE ACCOUNT SUMMARY
+# -------------------------
+
+@app.route("/accounts/summary", methods=["GET"])
+@jwt_required()
+def accounts_summary():
+    user_id = int(get_jwt_identity())
+
+    transactions = Expense.query.filter_by(
+        user_id=user_id
+    ).all()
+
+    accounts = {
+        "NGN": {
+            "income": 0.0,
+            "expenses": 0.0,
+            "balance": 0.0
+        },
+        "USD": {
+            "income": 0.0,
+            "expenses": 0.0,
+            "balance": 0.0
+        }
+    }
+
+    for transaction in transactions:
+        currency = (
+            transaction.currency or "NGN"
+        ).upper()
+
+        if currency not in accounts:
+            continue
+
+        amount = float(transaction.amount)
+
+        if transaction.type == "income":
+            accounts[currency]["income"] += amount
+
+        elif transaction.type == "expense":
+            accounts[currency]["expenses"] += amount
+
+    for account in accounts.values():
+        account["income"] = round(
+            account["income"],
+            2
+        )
+
+        account["expenses"] = round(
+            account["expenses"],
+            2
+        )
+
+        account["balance"] = round(
+            account["income"] -
+            account["expenses"],
+            2
+        )
+
+    return jsonify(accounts), 200
+
+
+# -------------------------
+# MONTHLY EXPENSE STATISTICS
+# -------------------------
+
+@app.route("/statistics/monthly", methods=["GET"])
+@jwt_required()
+def monthly_statistics():
+    user_id = int(get_jwt_identity())
+
+    currency = request.args.get(
+        "currency",
+        "NGN"
+    ).upper()
+
+    if currency not in ("NGN", "USD"):
+        return jsonify({
+            "error": "Currency must be NGN or USD"
+        }), 400
+
+    today = date.today()
+
+    try:
+        start_year = int(
+            request.args.get(
+                "start_year",
+                today.year
+            )
+        )
+
+        start_month = int(
+            request.args.get(
+                "start_month",
+                1
+            )
+        )
+
+        end_year = int(
+            request.args.get(
+                "end_year",
+                today.year
+            )
+        )
+
+        end_month = int(
+            request.args.get(
+                "end_month",
+                today.month
+            )
+        )
+
+        start_date = date(
+            start_year,
+            start_month,
+            1
+        )
+
+        if end_month == 12:
+            end_date = date(
+                end_year + 1,
+                1,
+                1
+            )
+        else:
+            end_date = date(
+                end_year,
+                end_month + 1,
+                1
+            )
+
+    except (TypeError, ValueError):
+        return jsonify({
+            "error": "Invalid statistics date range"
+        }), 400
+
+    if start_date >= end_date:
+        return jsonify({
+            "error":
+                "Start month must not be after end month"
+        }), 400
+
+    transactions = Expense.query.filter(
+        Expense.user_id == user_id,
+        Expense.currency == currency,
+        Expense.date >= start_date,
+        Expense.date < end_date
+    ).order_by(
+        Expense.date.asc()
+    ).all()
+
+    months = []
+
+    cursor_year = start_year
+    cursor_month = start_month
+
+    while (
+        cursor_year < end_year
+        or (
+            cursor_year == end_year
+            and cursor_month <= end_month
+        )
+    ):
+        months.append({
+            "year": cursor_year,
+            "month": cursor_month,
+            "label": date(
+                cursor_year,
+                cursor_month,
+                1
+            ).strftime("%b %Y"),
+            "income": 0.0,
+            "expenses": 0.0,
+            "net": 0.0
+        })
+
+        if cursor_month == 12:
+            cursor_month = 1
+            cursor_year += 1
+        else:
+            cursor_month += 1
+
+    lookup = {
+        (item["year"], item["month"]): item
+        for item in months
+    }
+
+    for transaction in transactions:
+        key = (
+            transaction.date.year,
+            transaction.date.month
+        )
+
+        month = lookup.get(key)
+
+        if not month:
+            continue
+
+        amount = float(transaction.amount)
+
+        if transaction.type == "income":
+            month["income"] += amount
+
+        elif transaction.type == "expense":
+            month["expenses"] += amount
+
+    total_income = 0.0
+    total_expenses = 0.0
+
+    for month in months:
+        month["income"] = round(
+            month["income"],
+            2
+        )
+
+        month["expenses"] = round(
+            month["expenses"],
+            2
+        )
+
+        month["net"] = round(
+            month["income"] -
+            month["expenses"],
+            2
+        )
+
+        total_income += month["income"]
+        total_expenses += month["expenses"]
+
+    return jsonify({
+        "currency": currency,
+
+        "range": {
+            "start": start_date.isoformat(),
+            "end": date(
+                end_year,
+                end_month,
+                1
+            ).isoformat()
+        },
+
+        "summary": {
+            "income": round(
+                total_income,
+                2
+            ),
+            "expenses": round(
+                total_expenses,
+                2
+            ),
+            "net": round(
+                total_income -
+                total_expenses,
+                2
+            )
+        },
+
+        "months": months
+    }), 200
+
+
 # -------------------------
 # SAVINGS
 # -------------------------
