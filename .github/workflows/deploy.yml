@@ -1,0 +1,60 @@
+name: Expense Tracker CI/CD
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    name: Validate and Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Create CI environment file
+        run: |
+          cat > .env <<'ENVEOF'
+          POSTGRES_DB=expense_tracker
+          POSTGRES_USER=expense_user
+          POSTGRES_PASSWORD=ci_test_password
+          JWT_SECRET_KEY=ci_test_jwt_secret
+          ENVEOF
+
+      - name: Validate Docker Compose
+        run: docker compose config --quiet
+
+      - name: Build Docker images
+        run: docker compose build
+
+      - name: Start application
+        run: docker compose up -d
+
+      - name: Wait for services
+        run: |
+          echo "Waiting for containers..."
+          sleep 20
+          docker compose ps
+
+      - name: Test frontend
+        run: |
+          curl --fail --retry 5 --retry-delay 5 \
+            http://127.0.0.1/
+
+      - name: Test API
+        run: |
+          curl --fail --retry 5 --retry-delay 5 \
+            http://127.0.0.1/api/
+
+      - name: Show logs on failure
+        if: failure()
+        run: docker compose logs --no-color
+
+      - name: Stop containers
+        if: always()
+        run: docker compose down -v
