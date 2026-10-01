@@ -102,7 +102,7 @@ jobs:
           printf '%s\n' "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/ec2_deploy_key
           chmod 600 ~/.ssh/ec2_deploy_key
 
-          ssh-keyscan -H "${{ secrets.EC2_HOST }}" >> ~/.ssh/known_hosts
+          touch ~/.ssh/known_hosts
           chmod 600 ~/.ssh/known_hosts
 
       - name: Deploy application
@@ -110,6 +110,7 @@ jobs:
           ssh \
             -i ~/.ssh/ec2_deploy_key \
             -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=accept-new \
             "${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}" <<'REMOTE'
               set -e
 
