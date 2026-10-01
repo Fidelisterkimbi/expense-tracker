@@ -39,7 +39,7 @@ services:
       context: ./frontend
     container_name: expense-tracker-frontend
     ports:
-      - "8080:80"
+      - "80:80"
     healthcheck:
       test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1/ || exit 1"]
       interval: 10s

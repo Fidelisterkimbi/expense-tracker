@@ -182,10 +182,6 @@ class SavingsPayment(db.Model):
     )
 
 
-with app.app_context():
-    db.create_all()
-
-
 @app.route("/")
 def home():
     return "Expense Tracker API is running!"
