@@ -130,3 +130,12 @@ resource "aws_instance" "expense_tracker" {
     Project = "expense-tracker"
   }
 }
+
+resource "aws_eip" "expense_tracker" {
+  domain   = "vpc"
+  instance = aws_instance.expense_tracker.id
+
+  tags = {
+    Name = "expense-tracker-eip"
+  }
+}

@@ -5,7 +5,7 @@ output "instance_id" {
 
 output "public_ip" {
   description = "Public IPv4 address of the Expense Tracker server"
-  value       = aws_instance.expense_tracker.public_ip
+  value       = aws_eip.expense_tracker.public_ip
 }
 
 output "public_dns" {
@@ -15,10 +15,10 @@ output "public_dns" {
 
 output "application_url" {
   description = "Expense Tracker application URL"
-  value       = "http://${aws_instance.expense_tracker.public_ip}"
+  value       = "http://${aws_eip.expense_tracker.public_ip}"
 }
 
 output "ssh_command" {
   description = "SSH command for connecting to the server"
-  value       = "ssh ubuntu@${aws_instance.expense_tracker.public_ip}"
+  value       = "ssh ubuntu@${aws_eip.expense_tracker.public_ip}"
 }
