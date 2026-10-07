@@ -47,3 +47,4 @@ crash.log
 *.tfplan
 terraform.tfvars
 crash.log
+kubernetes/secret.yaml

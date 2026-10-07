@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: expense-tracker-frontend
+  labels:
+    app: expense-tracker-frontend
+spec:
+  type: ClusterIP
+  selector:
+    app: expense-tracker-frontend
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80
+      targetPort: 80
