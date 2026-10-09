@@ -107,7 +107,7 @@ resource "aws_vpc_security_group_egress_rule" "all" {
 # ==========================================
 
 resource "aws_instance" "expense_tracker" {
-  ami           = data.aws_ami.ubuntu.id
+  ami           = "ami-0045d7fc2ad003464"
   instance_type = var.instance_type
 
   subnet_id = var.subnet_id
