@@ -48,3 +48,6 @@ crash.log
 terraform.tfvars
 crash.log
 kubernetes/secret.yaml
+
+# Local Trivy vulnerability database cache
+.trivy-cache/

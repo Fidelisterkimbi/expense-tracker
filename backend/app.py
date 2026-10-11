@@ -1,3 +1,5 @@
+from json_logging import configure_logging
+from metrics import setup_metrics
 import requests
 from datetime import date, datetime, timedelta
 import os
@@ -18,8 +20,11 @@ from flask_jwt_extended import (
 
 load_dotenv()
 
+configure_logging()
+
 app = Flask(__name__)
 CORS(app)
+setup_metrics(app)
 
 app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL")
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False

@@ -10,4 +10,6 @@ COPY . .
 
 EXPOSE 5000
 
-CMD ["sh", "-c", "python init_db.py && exec gunicorn --bind 0.0.0.0:5000 --workers 2 --timeout 60 app:app"]
+ENV PROMETHEUS_MULTIPROC_DIR=/tmp/prometheus-multiproc
+
+CMD ["sh", "-c", "mkdir -p \"$PROMETHEUS_MULTIPROC_DIR\" && rm -f \"$PROMETHEUS_MULTIPROC_DIR\"/*.db && python init_db.py && exec gunicorn -c gunicorn.conf.py app:app"]

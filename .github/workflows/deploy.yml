@@ -30,7 +30,30 @@ jobs:
         run: docker compose config --quiet
 
       - name: Build Docker images
-        run: docker compose build
+        run: docker compose build --pull
+
+      - name: Scan Docker images with Trivy
+        run: |
+          set -e
+          docker image inspect expense-tracker-backend:latest
+          docker image inspect expense-tracker-frontend:latest
+
+          for image in \
+            expense-tracker-backend:latest \
+            expense-tracker-frontend:latest
+          do
+            echo "Scanning $image"
+
+            docker run --rm \
+              -v /var/run/docker.sock:/var/run/docker.sock \
+              aquasec/trivy:0.69.3 image \
+              --image-src docker \
+              --scanners vuln \
+              --exit-code 1 \
+              --severity HIGH,CRITICAL \
+              --ignore-unfixed \
+              "$image"
+          done
 
       - name: Start application
         run: docker compose up -d
