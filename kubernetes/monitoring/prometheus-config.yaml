@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: monitoring
+data:
+  prometheus.yml: "global:\n  scrape_interval: 15s\nscrape_configs:\n- job_name: prometheus\n\
+    \  static_configs:\n  - targets:\n    - localhost:9090\n- job_name: expense-tracker-backend\n\
+    \  kubernetes_sd_configs:\n  - role: pod\n    namespaces:\n      names:\n    \
+    \  - default\n  relabel_configs:\n  - source_labels:\n    - __meta_kubernetes_pod_label_app\n\
+    \    regex: expense-tracker-backend\n    action: keep\n  - source_labels:\n  \
+    \  - __meta_kubernetes_pod_container_port_number\n    regex: '5000'\n    action:\
+    \ keep\n  - target_label: __metrics_path__\n    replacement: /metrics\nrule_files:\n\
+    - /etc/prometheus/rules/alerts.yml\n"

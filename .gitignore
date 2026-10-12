@@ -51,3 +51,9 @@ kubernetes/secret.yaml
 
 # Local Trivy vulnerability database cache
 .trivy-cache/
+
+# Local infrastructure variables and private keys
+*.tfvars
+*.tfvars.json
+*.pem
+*.key

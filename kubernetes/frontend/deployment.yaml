@@ -18,6 +18,11 @@ spec:
         - name: frontend
           image: fidelii2004/expense-tracker-frontend:latest
           imagePullPolicy: Always
+          volumeMounts:
+            - name: nginx-config
+              mountPath: /etc/nginx/conf.d/default.conf
+              subPath: default.conf
+              readOnly: true
           ports:
             - containerPort: 80
               protocol: TCP
@@ -47,3 +52,7 @@ spec:
             limits:
               cpu: "250m"
               memory: "256Mi"
+      volumes:
+        - name: nginx-config
+          configMap:
+            name: expense-tracker-frontend-nginx

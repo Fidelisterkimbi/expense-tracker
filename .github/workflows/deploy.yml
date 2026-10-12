@@ -1,6 +1,7 @@
 name: Expense Tracker CI/CD
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
@@ -31,6 +32,10 @@ jobs:
 
       - name: Build Docker images
         run: docker compose build --pull
+
+      - name: Run backend tests
+        run: |
+          docker compose run --rm --no-deps --entrypoint sh backend -c 'mkdir -p "$PROMETHEUS_MULTIPROC_DIR" && python -m unittest discover -s /app -p test_app.py -v'
 
       - name: Scan Docker images with Trivy
         run: |
@@ -84,8 +89,11 @@ jobs:
 
   deploy:
     name: Deploy to EC2
+    concurrency:
+      group: expense-tracker-production
+      cancel-in-progress: false
     needs: build
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
 
     permissions:
@@ -129,18 +137,22 @@ jobs:
           chmod 600 ~/.ssh/known_hosts
 
       - name: Deploy application
+        env:
+          DEPLOY_SHA: ${{ github.sha }}
         run: |
           ssh \
             -i ~/.ssh/ec2_deploy_key \
             -o IdentitiesOnly=yes \
             -o StrictHostKeyChecking=accept-new \
-            "${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}" <<'REMOTE'
+            "${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}" bash -s -- "$DEPLOY_SHA" <<'REMOTE'
               set -e
 
               cd ~/expense-tracker
 
-              git fetch origin main
-              git reset --hard origin/main
+              deploy_sha="$1"
+              git fetch origin "$deploy_sha"
+              test "$(git rev-parse FETCH_HEAD)" = "$deploy_sha"
+              git reset --hard "$deploy_sha"
 
               sudo docker compose config --quiet
               sudo docker compose up -d --build

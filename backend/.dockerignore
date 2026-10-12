@@ -1,0 +1,15 @@
+
+# Local files excluded from the backend image
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+.env
+.env.*
+*.pem
+*.key
+uploads/
+*.log
+*-before-*
+*.backup
+*.bak
