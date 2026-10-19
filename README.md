@@ -70,3 +70,6 @@ Full Kubernetes schema/runtime validation, final Trivy results, final CI run,
 and approved production deployment evidence remain outstanding.
 Confirm the assignment rubric before claiming completion.
 Keep secrets, private keys, Terraform state/plans/variables untracked.
+
+## Mobile apps
+See [Android and iPhone setup and builds](mobile/README.md).

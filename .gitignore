@@ -57,3 +57,10 @@ kubernetes/secret.yaml
 *.tfvars.json
 *.pem
 *.key
+
+# Expo build outputs
+mobile/.expo/
+mobile/dist/
+mobile/android/
+mobile/ios/
+!mobile/.env.example

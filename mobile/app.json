@@ -1,0 +1,25 @@
+{
+  "expo": {
+    "name": "Expense Tracker",
+    "slug": "devops-expense-tracker",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.fidelisterkimbi.expensetracker"
+    },
+    "android": { "package": "com.fidelisterkimbi.expensetracker" },
+    "plugins": [
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Choose a profile photo for your Expense Tracker account.",
+          "cameraPermission": false,
+          "microphonePermission": false
+        }
+      ]
+    ]
+  }
+}
