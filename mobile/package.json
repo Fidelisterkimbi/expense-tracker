@@ -1,0 +1,29 @@
+{
+  "name": "expense-tracker-mobile",
+  "description": "Shared Android and iPhone client for the Expense Tracker Flask API.",
+  "version": "1.0.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Fidelisterkimbi/expense-tracker.git",
+    "directory": "mobile"
+  },
+  "main": "index.js",
+  "dependencies": {
+    "expo": "~58.0.14",
+    "expo-status-bar": "~58.0.3",
+    "react": "19.3.0",
+    "react-native": "0.88.0",
+    "expo-secure-store": "~58.0.2",
+    "expo-image-picker": "~58.0.10",
+    "react-native-safe-area-context": "~5.10.1"
+  },
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "test": "node --test tests/*.test.mjs",
+    "export:android": "expo export --platform android --output-dir dist/android",
+    "export:ios": "expo export --platform ios --output-dir dist/ios"
+  },
+  "private": true
+}
