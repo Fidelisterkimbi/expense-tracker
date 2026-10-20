@@ -11,6 +11,15 @@ from scripts import finish_eks as deploy
 
 
 class DeploymentSafetyTests(unittest.TestCase):
+    def test_monitoring_applies_resources_without_dashboard_json(self):
+        with patch.object(deploy, "run", return_value="secret/grafana-admin") as calls:
+            deploy.monitoring()
+        applications = [c.args[0] for c in calls.call_args_list if "apply" in c.args[0]]
+        paths = [str(arg) for command in applications for arg in command if str(arg).endswith((".yaml", ".json"))]
+        self.assertTrue(any(path.endswith("grafana-dashboards.yaml") for path in paths))
+        self.assertTrue(any(path.endswith("prometheus.yaml") for path in paths))
+        self.assertFalse(any(path.endswith(".json") for path in paths))
+
     def test_wrong_account_stops_before_cluster_access(self):
         with patch.object(deploy, "aws", return_value={"Account": "000000000000"}), patch.object(deploy, "run") as run:
             with self.assertRaisesRegex(RuntimeError, "Wrong AWS account"):

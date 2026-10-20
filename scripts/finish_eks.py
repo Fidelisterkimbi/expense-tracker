@@ -293,7 +293,13 @@ def monitoring():
         password.chmod(0o600)
         run(["kubectl", "--context", CLUSTER, "-n", "monitoring", "create", "secret", "generic", "grafana-admin",
              f"--from-file=password={password}"])
-    run(["kubectl", "--context", CLUSTER, "apply", "-f", "kubernetes/monitoring/"])
+    # dashboard.json is Grafana data, already embedded in grafana-dashboards.yaml.
+    # Applying the directory also sends that JSON to Kubernetes as a resource.
+    manifests = sorted((ROOT / "kubernetes/monitoring").glob("*.yaml"))
+    if not manifests:
+        raise RuntimeError("Monitoring manifests were not found")
+    run(["kubectl", "--context", CLUSTER, "apply",
+         *[arg for manifest in manifests for arg in ("-f", str(manifest))]])
     for name in ("prometheus", "grafana"):
         run(["kubectl", "--context", CLUSTER, "-n", "monitoring", "rollout", "status", f"deployment/{name}", "--timeout=300s"])
 
