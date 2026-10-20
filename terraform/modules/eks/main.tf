@@ -8,10 +8,10 @@ resource "aws_cloudwatch_log_group" "eks" {
 }
 
 resource "aws_eks_cluster" "this" {
-  depends_on               = [aws_cloudwatch_log_group.eks]
-  name                     = var.cluster_name
-  role_arn                 = var.cluster_role_arn
-  version                  = var.kubernetes_version
+  depends_on                = [aws_cloudwatch_log_group.eks]
+  name                      = var.cluster_name
+  role_arn                  = var.cluster_role_arn
+  version                   = var.kubernetes_version
   enabled_cluster_log_types = ["api", "audit", "authenticator", "controllerManager", "scheduler"]
 
   vpc_config {
