@@ -7,6 +7,7 @@ import secrets
 
 from flask import Flask, request, jsonify, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import text
 from flask_cors import CORS
 from dotenv import load_dotenv
 from flask_bcrypt import Bcrypt
@@ -190,6 +191,21 @@ class SavingsPayment(db.Model):
 @app.route("/")
 def home():
     return "Expense Tracker API is running!"
+
+
+@app.route("/health/live")
+def health_live():
+    return jsonify(status="ok")
+
+
+@app.route("/health/ready")
+def health_ready():
+    try:
+        db.session.execute(text("SELECT 1"))
+    except Exception:
+        db.session.rollback()
+        return jsonify(status="unavailable"), 503
+    return jsonify(status="ok")
 
 
 # -------------------------
