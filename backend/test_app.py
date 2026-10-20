@@ -1,5 +1,6 @@
 import os
 import unittest
+from unittest.mock import patch
 
 # Set before importing app so tests never use the application database.
 os.environ["DATABASE_URL"] = "sqlite:///:memory:"
@@ -9,6 +10,16 @@ from app import app, db, User, bcrypt
 
 
 class ExpenseTrackerTests(unittest.TestCase):
+    def test_health_checks_distinguish_database_failure_from_liveness(self):
+        with app.test_client() as client:
+            self.assertEqual(client.get("/health/live").status_code, 200)
+            self.assertEqual(client.get("/health/ready").status_code, 200)
+            with patch.object(db.session, "execute", side_effect=RuntimeError("private database detail")):
+                response = client.get("/health/ready")
+                self.assertEqual(response.status_code, 503)
+                self.assertNotIn("private database detail", response.get_data(as_text=True))
+                self.assertEqual(client.get("/health/live").status_code, 200)
+
     def setUp(self):
         app.config["TESTING"] = True
         self.context = app.app_context()
