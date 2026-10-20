@@ -299,16 +299,27 @@ def monitoring():
 
 
 def verify():
-    service = obj("get", "service", "expense-tracker-frontend")
-    entries = service.get("status", {}).get("loadBalancer", {}).get("ingress", [])
-    if not entries or not entries[0].get("hostname"):
-        raise RuntimeError("AWS has not assigned the NLB hostname yet; retry verify shortly")
-    url = "http://" + entries[0]["hostname"]
-    for path in ("/", "/api/health/live", "/api/health/ready", "/api/metrics"):
-        with urllib.request.urlopen(url + path, timeout=30) as response:
-            if response.status != 200:
-                raise RuntimeError("Smoke check failed: " + path)
-            print(f"HTTP {response.status}: {path}")
+    deadline = time.monotonic() + 300
+    paths = ("/", "/api/health/live", "/api/health/ready", "/api/metrics")
+    while True:
+        service = obj("get", "service", "expense-tracker-frontend")
+        entries = service.get("status", {}).get("loadBalancer", {}).get("ingress", [])
+        if entries and entries[0].get("hostname"):
+            url = "http://" + entries[0]["hostname"]
+            try:
+                for path in paths:
+                    with urllib.request.urlopen(url + path, timeout=10) as response:
+                        if response.status != 200:
+                            raise OSError("Health check has not passed")
+                break
+            except OSError:
+                pass
+        if time.monotonic() >= deadline:
+            raise RuntimeError("NLB smoke checks did not pass within five minutes; inspect service events and target health")
+        print("Waiting for the NLB hostname, DNS and healthy targets...", flush=True)
+        time.sleep(10)
+    for path in paths:
+        print(f"HTTP 200: {path}")
     mark("expense-tracker-candidate-checked", {"url": url, "scope": "HTTP health only; data cutover not approved"})
     print("Candidate URL: " + url)
     print("EC2 remains the source of truth. Do not use real credentials over HTTP or switch production traffic yet.")
@@ -327,6 +338,7 @@ def main():
         restore()
         deploy(images)
         monitoring()
+        verify()
     else:
         verify()
 

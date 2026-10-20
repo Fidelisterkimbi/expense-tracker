@@ -26,6 +26,8 @@ python3 scripts/finish_eks.py prepare
 If preparation already built and published images but stopped at a nonempty
 database, pull the latest branch and run `python3 scripts/finish_eks.py resume`.
 Resume checks the recorded image digests and scan reports without rebuilding.
+Preparation and resume now wait up to five minutes for NLB health checks and
+print the candidate URL automatically; a separate verify command is optional.
 For an unmarked, nonempty database it restores the backup into a disposable local
 PostgreSQL container with no network access, then compares columns, constraints,
 row counts, ordered row-content hashes and sequence states against a read-only
