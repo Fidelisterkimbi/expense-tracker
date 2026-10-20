@@ -6,11 +6,13 @@ import hashlib
 import ipaddress
 import json
 import os
+import re
 from pathlib import Path
 import secrets
 import subprocess
 import sys
 import tarfile
+import time
 import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -21,6 +23,30 @@ CLUSTER = "expense-tracker-eks"
 REGISTRY = f"{ACCOUNT}.dkr.ecr.{REGION}.amazonaws.com"
 K = ["kubectl", "--context", CLUSTER, "-n", "default"]
 DOCKER = ["sudo", "docker"]
+
+# Only aggregate hashes leave PostgreSQL. No application records are printed.
+SNAPSHOT_SQL = r"""
+BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY;
+SET LOCAL TIME ZONE 'UTC';
+SELECT 'column|' || table_name || '|' || ordinal_position || '|' || column_name || '|' ||
+       udt_name || '|' || is_nullable || '|' || coalesce(column_default, '')
+FROM information_schema.columns WHERE table_schema = 'public'
+ORDER BY table_name, ordinal_position;
+SELECT 'constraint|' || c.relname || '|' || k.conname || '|' || pg_get_constraintdef(k.oid)
+FROM pg_constraint k JOIN pg_class c ON c.oid = k.conrelid
+JOIN pg_namespace n ON n.oid = c.relnamespace
+WHERE n.nspname = 'public' ORDER BY c.relname, k.conname;
+SELECT format($q$SELECT %L || '|' || count(*)::text || '|' ||
+    coalesce(md5(string_agg(to_jsonb(t)::text, E'\n' ORDER BY to_jsonb(t)::text)), md5(''))
+    FROM %I.%I AS t;$q$, 'table:' || tablename, schemaname, tablename)
+FROM pg_tables WHERE schemaname = 'public' ORDER BY tablename
+\gexec
+SELECT format($q$SELECT %L || '|' || last_value::text || '|' || is_called::text FROM %I.%I;$q$,
+    'sequence:' || sequencename, schemaname, sequencename)
+FROM pg_sequences WHERE schemaname = 'public' ORDER BY sequencename
+\gexec
+COMMIT;
+"""
 
 
 def run(args, *, capture=False, payload=None, source=None, target=None):
@@ -119,6 +145,66 @@ def build():
     return images
 
 
+def cached_images():
+    images = json.loads((WORK / "images.json").read_text())
+    if set(images) != {"backend", "frontend"}:
+        raise RuntimeError("Incomplete image cache; run prepare to build images")
+    for part, image in images.items():
+        prefix = f"{REGISTRY}/expense-tracker-{part}@"
+        if not isinstance(image, str) or not image.startswith(prefix) or not re.fullmatch(r"sha256:[0-9a-f]{64}", image[len(prefix):]):
+            raise RuntimeError("Cached image is not an expected ECR digest")
+        detail = aws("ecr", "describe-images", "--repository-name", f"expense-tracker-{part}",
+                     "--image-ids", "imageDigest=" + image[len(prefix):])["imageDetails"][0]
+        reports = [WORK / f"{tag}-{part}-scan.json" for tag in detail.get("imageTags", [])
+                   if re.fullmatch(r"eks-[0-9]{14}-[0-9a-f]{6}", tag)]
+        reports = [path for path in reports if path.is_file()]
+        if not reports:
+            raise RuntimeError("Matching local vulnerability report missing; run prepare")
+        report = json.loads(max(reports, key=lambda p: p.stat().st_mtime).read_text())
+        findings = [v for result in report.get("Results", []) for v in result.get("Vulnerabilities", [])
+                    if v.get("Severity") in ("HIGH", "CRITICAL")]
+        if any(v.get("FixedVersion") for v in findings):
+            raise RuntimeError("Cached image has fixable HIGH/CRITICAL vulnerabilities")
+        print(f"Reusing {part} digest; recorded HIGH/CRITICAL findings: {len(findings)}")
+    return images
+
+
+def validate_existing_restore(backup):
+    """Compare a read-only EKS snapshot with a disposable local backup restore."""
+    container = "expense-tracker-backup-check-" + secrets.token_hex(6)
+    run(["sudo", "-v"])
+    run([*DOCKER, "run", "-d", "--name", container, "--network", "none",
+         "--tmpfs", "/var/lib/postgresql/data:rw", "-e", "POSTGRES_HOST_AUTH_METHOD=trust",
+         "-e", "POSTGRES_DB=backup_check", "postgres:16"])
+    try:
+        deadline = time.monotonic() + 90
+        while True:
+            ready = subprocess.run([*DOCKER, "exec", container, "pg_isready", "-h", "127.0.0.1", "-U", "postgres", "-d", "backup_check"],
+                                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0
+            if ready:
+                break
+            if time.monotonic() >= deadline:
+                raise RuntimeError("Temporary local PostgreSQL did not become ready")
+            time.sleep(2)
+        with (backup / "database.dump").open("rb") as source:
+            run([*DOCKER, "exec", "-i", container, "pg_restore", "--exit-on-error", "--single-transaction",
+                 "--no-owner", "--no-acl", "-U", "postgres", "-d", "backup_check"], source=source)
+        expected = run([*DOCKER, "exec", "-i", container, "psql", "-X", "-qAt", "-v", "ON_ERROR_STOP=1",
+                        "-U", "postgres", "-d", "backup_check"], payload=SNAPSHOT_SQL.encode(), capture=True)
+        actual = run([*K, "exec", "-i", "expense-tracker-database-0", "--", "sh", "-c",
+                      'exec psql -X -qAt -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB"'],
+                     payload=SNAPSHOT_SQL.encode(), capture=True)
+        # Keep only private digest evidence, never row contents.
+        (WORK / "backup-fingerprint.txt").write_text(expected + "\n")
+        (WORK / "eks-fingerprint.txt").write_text(actual + "\n")
+        if not expected or expected != actual:
+            raise RuntimeError("Existing EKS database differs from the backup; no data was overwritten. Review private fingerprint files.")
+        print("Existing EKS data matches the backup: columns, constraints, row counts, row hashes and sequences.")
+    finally:
+        # Delete only the isolated, randomly named verification container created above.
+        run([*DOCKER, "rm", "-f", container])
+
+
 def restore():
     backup = Path((ROOT / "work/eks-backups/latest-path.txt").read_text().strip()).resolve()
     dump = backup / "database.dump"
@@ -143,10 +229,11 @@ def restore():
         count = run([*K, "exec", "expense-tracker-database-0", "--", "sh", "-c",
                      'exec psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Atc "$1"', "sh", sql], capture=True)
         if count != "0":
-            raise RuntimeError("EKS database is not empty; refusing to overwrite it. Verify any earlier restore manually.")
-        with dump.open("rb") as source:
-            run([*K, "exec", "-i", "expense-tracker-database-0", "--", "sh", "-c",
-                 'exec pg_restore --exit-on-error --single-transaction --no-owner --no-acl -U "$POSTGRES_USER" -d "$POSTGRES_DB"'], source=source)
+            validate_existing_restore(backup)
+        else:
+            with dump.open("rb") as source:
+                run([*K, "exec", "-i", "expense-tracker-database-0", "--", "sh", "-c",
+                     'exec pg_restore --exit-on-error --single-transaction --no-owner --no-acl -U "$POSTGRES_USER" -d "$POSTGRES_DB"'], source=source)
         mark("expense-tracker-database-restored", {"sha256": fingerprint})
     previous = marker("expense-tracker-uploads-restored")
     if previous:
@@ -229,14 +316,14 @@ def verify():
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=["prepare", "verify"])
+    parser.add_argument("command", choices=["prepare", "resume", "verify"])
     args = parser.parse_args()
     os.umask(0o077)
     os.environ["AWS_PAGER"] = ""
     WORK.mkdir(parents=True, exist_ok=True)
     preflight()
-    if args.command == "prepare":
-        images = build()
+    if args.command in ("prepare", "resume"):
+        images = build() if args.command == "prepare" else cached_images()
         restore()
         deploy(images)
         monitoring()

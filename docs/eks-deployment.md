@@ -23,6 +23,17 @@ git switch --track origin/codex/eks-deployment
 python3 scripts/finish_eks.py prepare
 ```
 
+If preparation already built and published images but stopped at a nonempty
+database, pull the latest branch and run `python3 scripts/finish_eks.py resume`.
+Resume checks the recorded image digests and scan reports without rebuilding.
+For an unmarked, nonempty database it restores the backup into a disposable local
+PostgreSQL container with no network access, then compares columns, constraints,
+row counts, ordered row-content hashes and sequence states against a read-only
+snapshot of EKS. Only an exact match is adopted. A mismatch stops without writing
+to EKS data. Temporary local PostgreSQL uses tmpfs and is removed afterward;
+private hash evidence stays under work/. This verifies the initial snapshot,
+not subsequent EC2 writes or application behavior.
+
 Only stash the worker file if it is modified; do not stash secrets or backups.
 The branch already includes the c7i-flex.large change. Do not drop other work.
 The script requires the existing work/eks-backups/latest-path.txt, application
@@ -41,8 +52,8 @@ new health endpoints.
 
 The restore requires an empty destination database and uses a single transaction
 without --clean. A hash marker records each completed restore. A nonempty database
-without a marker stops execution; investigate an earlier manual restore rather
-than deleting tables. Keep all private backup, credential and state files local.
+without a marker must match the isolated backup comparison before being adopted;
+it is never overwritten. Keep all private backup, credential and state files local.
 Script markers allow resuming the same snapshot, but do not prove production
 data parity. A restore failure rolls back the database transaction.
 

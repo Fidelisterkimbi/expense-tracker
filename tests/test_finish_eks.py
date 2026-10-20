@@ -3,6 +3,7 @@ import json
 from pathlib import Path
 import tarfile
 import tempfile
+from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
@@ -50,18 +51,47 @@ class DeploymentSafetyTests(unittest.TestCase):
                 run.assert_not_called()
                 apply.assert_not_called()
 
-    def test_nonempty_database_is_never_overwritten(self):
+    def test_different_nonempty_database_is_never_overwritten(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
             self.backup(root)
             with patch.object(deploy, "ROOT", root), patch.object(deploy, "marker", return_value=None), \
                  patch.object(deploy, "obj", return_value={"items": []}), \
-                 patch.object(deploy, "run", return_value="7") as run, patch.object(deploy, "apply") as apply:
-                with self.assertRaisesRegex(RuntimeError, "not empty"):
+                 patch.object(deploy, "run", return_value="7") as run, patch.object(deploy, "apply") as apply, \
+                 patch.object(deploy, "validate_existing_restore", side_effect=RuntimeError("Database differs")):
+                with self.assertRaisesRegex(RuntimeError, "differs"):
                     deploy.restore()
                 self.assertEqual(run.call_count, 1)
                 self.assertNotIn("pg_restore", " ".join(run.call_args.args[0]))
                 apply.assert_not_called()
+
+    def test_fingerprint_mismatch_stops_and_cleans_up_only_local_container(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            self.backup(root)
+            def run(args, **kwargs):
+                if "psql" in args:
+                    return "table:users|2|expected"
+                if args[:len(deploy.K)] == deploy.K:
+                    return "table:users|3|different"
+                return ""
+            with patch.object(deploy, "WORK", root), patch.object(deploy, "run", side_effect=run) as calls, \
+                 patch.object(deploy.subprocess, "run", return_value=SimpleNamespace(returncode=0)):
+                with self.assertRaisesRegex(RuntimeError, "differs"):
+                    deploy.validate_existing_restore(root / "backup")
+                self.assertIn("rm", calls.call_args.args[0])
+                for call in calls.call_args_list:
+                    args = call.args[0]
+                    if args[:len(deploy.K)] == deploy.K:
+                        self.assertNotIn("pg_restore", " ".join(args))
+
+    def test_matching_fingerprint_is_accepted(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            self.backup(root)
+            with patch.object(deploy, "WORK", root), patch.object(deploy, "run", return_value="matching-private-fingerprint"), \
+                 patch.object(deploy.subprocess, "run", return_value=SimpleNamespace(returncode=0)):
+                deploy.validate_existing_restore(root / "backup")
 
 
 if __name__ == "__main__":
